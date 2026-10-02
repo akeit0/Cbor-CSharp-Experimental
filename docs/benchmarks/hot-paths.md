@@ -51,7 +51,7 @@ The original integer-array case has approximately 40.7% lower decode time and 25
 
 Large-model encode has a 4.6% higher mean with separated intervals in this confirmation. This remains an open regression concern requiring matched code-generation/runtime controls and profiling; its cause is not established. Earlier measurements also showed launch-dependent encoding distributions. Absence of a multimodality warning in this run does not resolve those observations. The optimization is not a uniform speedup across workloads.
 
-[Versioned summaries, both launches, raw workload/overhead samples and GC records](hot-path-data/README.md) retain the evidence. These are Cbor-only before/after measurements; they do not refresh the historical [five-library results](serializer-comparison.md) or establish MessagePack performance parity. Cold graph creation/retention, other runtime/buffer tiers, floats/bools/lists and additional hosts need separate measurements before extending the integer-array optimization.
+[Versioned summaries, both launches, raw workload/overhead samples and GC records](hot-path-data/README.md) retain the evidence. These are Cbor-only before/after measurements; they do not refresh the historical [five-library results](serializer-comparison-baseline.md) or establish MessagePack performance parity. A subsequent [main comparison refresh](serializer-comparison.md) measures all five providers against this optimized implementation separately. Cold graph creation/retention, other runtime/buffer tiers, floats/bools/lists and additional hosts need separate measurements before extending the integer-array optimization.
 
 ## Correctness and code generation
 

@@ -21,10 +21,16 @@ Install the SDK in this project's global.json and the .NET 10 runtime first. Run
 
 ```powershell
 Set-Location benchmarks/Cbor.Benchmarks.Comparison
-dotnet run -c Release --no-build --no-restore -- --filter '*Comparison*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts ../../artifacts/benchmarks/serializer-comparison
+dotnet run -c Release --no-build --no-restore -- --filter '*Comparison*' --job short --warmupCount 4 --iterationCount 6 --launchCount 2 --iterationTime 200 --artifacts ../../artifacts/benchmarks/serializer-comparison-optimized
 ```
 
 Complete builds/tests before measurements. Run suites sequentially. Preserve the complete reports, including errors, allocations, and warnings. Hosted CI remains disabled; this comparison is not part of the core verification solution's build graph.
+
+The optimized main refresh uses the command above. After short-iteration warnings, seven decode cases received this targeted confirmation; both runs are retained, and the main tables select these longer results for the corresponding cells:
+
+```powershell
+dotnet run -c Release --no-build --no-restore -- --filter '*StringMapComparison*Decode*' '*NestedModelComparison.PeterODecode*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts ../../artifacts/benchmarks/serializer-comparison-decode-confirmation
+```
 
 ## Contracts and controls
 
@@ -38,7 +44,7 @@ System.Formats.Cbor has no CLR object serializer; the adapters include reader/wr
 
 Model wire formats differ: Cbor and the System.Formats adapter use integer-keyed CBOR maps; MessagePack uses indexed arrays; REDox uses property-name CBOR maps; PeterO uses camel-cased property-name CBOR maps. Payload sizes are recorded separately. Defaults differ in safety checks, limits, and encoding choices; the fixtures are valid bounded inputs, and results do not establish equivalent error behavior or security guarantees. Ratios compare complete operations on equivalent CLR data, not identical wire work or full feature parity.
 
-See [the measured comparison](../../docs/benchmarks/serializer-comparison.md) and its versioned summary/launch data.
+See [the measured comparison](../../docs/benchmarks/serializer-comparison.md) and its versioned summary/launch data. The [original baseline](../../docs/benchmarks/serializer-comparison-baseline.md) retains its longer iteration settings and original evidence.
 
 ## Development loop
 
