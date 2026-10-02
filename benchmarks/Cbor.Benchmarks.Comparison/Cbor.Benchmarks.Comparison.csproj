@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" />
+    <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../external/MessagePack-CSharp/src/MessagePack/MessagePack.csproj" />
+    <ProjectReference Include="../../external/MessagePack-CSharp/src/MessagePack.SourceGenerator/MessagePack.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="CAPCOM.REDox.Cbor" />
+    <PackageReference Include="PeterO.Cbor" Aliases="PeterOCbor" />
+    <PackageReference Include="System.Formats.Cbor" />
+  </ItemGroup>
+</Project>

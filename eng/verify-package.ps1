@@ -13,11 +13,11 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath 
 try {
     $paths = @($archive.Entries | ForEach-Object { $_.FullName })
     $required = @(
-        "lib/netstandard2.0/Cbor.dll",
-        "lib/netstandard2.1/Cbor.dll",
-        "lib/net8.0/Cbor.dll",
-        "lib/net9.0/Cbor.dll",
-        "lib/net10.0/Cbor.dll",
+        "lib/netstandard2.0/Cbor.CSharp.dll",
+        "lib/netstandard2.1/Cbor.CSharp.dll",
+        "lib/net8.0/Cbor.CSharp.dll",
+        "lib/net9.0/Cbor.CSharp.dll",
+        "lib/net10.0/Cbor.CSharp.dll",
         "analyzers/dotnet/cs/Cbor.SourceGenerator.dll",
         "analyzers/dotnet/cs/Cbor.SourceGenerator.CodeFixes.dll",
         "README.md",
@@ -26,6 +26,9 @@ try {
     )
     foreach ($entry in $required) {
         if ($paths -notcontains $entry) { throw "Package is missing $entry." }
+    }
+    if ($paths -match '^lib/[^/]+/(Cbor|Cbor\.Comparison\.Runtime)\.dll$') {
+        throw "Package contains an obsolete or comparison-only runtime assembly name."
     }
 
     $nuspecEntry = $archive.Entries | Where-Object { $_.FullName -like "*.nuspec" } | Select-Object -First 1

@@ -4,6 +4,8 @@
     <IsPackable>true</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>Cbor</PackageId>
+    <AssemblyName>Cbor.CSharp</AssemblyName>
+    <RootNamespace>Cbor</RootNamespace>
     <Description>High-performance CBOR serialization for .NET, built on SerializerFoundation with typed formatters, source generation, and Native AOT support. Experimental development release.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <!-- The package bundles an MIT-licensed analyzer adaptation alongside original Unlicense code. -->
