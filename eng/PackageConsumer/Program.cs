@@ -2,7 +2,6 @@ using System.Buffers;
 using Cbor;
 using SerializerFoundation;
 
-LegacyProviderChecks.Run();
 
 var output = new ArrayBufferWriter<byte>();
 #if NET9_0_OR_GREATER
@@ -49,7 +48,7 @@ finally
     reader.Dispose();
 }
 
-var typedOptions = new CborSerializerOptions(Cbor.Samples.SampleResolver.Instance);
+var typedOptions = new CborSerializerOptions(Cbor.Samples.SampleFactory.Instance);
 if (CborSerializer.Deserialize<string>(Convert.FromHexString("7F61686169FF")) != "hi" ||
     !CborSerializer.Deserialize<byte[]>(Convert.FromHexString("5F4201024103FF")).SequenceEqual(new byte[] { 1, 2, 3 }))
 {

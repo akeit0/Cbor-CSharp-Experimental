@@ -15,7 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Cbor" />
-    <ProjectReference Include="../LegacyPackageProvider/LegacyPackageProvider.csproj" GlobalPropertiesToRemove="TargetFrameworks;CborVerifyNativeConsumer" />
   </ItemGroup>
   <Target Name="VerifyInstalledAnalyzers" AfterTargets="ResolveReferences">
     <ItemGroup>

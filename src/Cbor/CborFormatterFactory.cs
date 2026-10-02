@@ -9,36 +9,22 @@ public abstract class CborFormatterFactory
     /// <summary>The AOT-safe built-in scalar factory.</summary>
     public static CborFormatterFactory Builtin { get; } = new Internal.BuiltinFormatterFactory();
 
+    /// <summary>Creates a fresh formatter for the requested buffer pair and value type, or returns null.</summary>
+    public abstract object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
+        where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
-    /// <summary>Creates a formatter for arbitrary modern buffer types; downlevel providers use the Type overload.</summary>
-    public virtual object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
-        where TWriteBuffer : struct, IWriteBuffer, allows ref struct
-        where TReadBuffer : struct, IReadBuffer, allows ref struct
-        => CreateFormatter(typeof(TWriteBuffer), typeof(TReadBuffer), valueType);
+        , allows ref struct
 #endif
-
-    /// <summary>Creates a formatter for a supported buffer pair, or returns null. This signature is stable across targets.</summary>
-    public abstract object? CreateFormatter(Type writeBufferType, Type readBufferType, Type valueType);
+        where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
+#endif
+    ;
 
     /// <summary>Creates a resolver with an independent cache of initialized formatter graphs.</summary>
     public CborFormatterResolver CreateResolver() => new(this);
 
-    /// <summary>Adapts a generated, built-in, or factory-backed resolver without reusing its initialized graph.</summary>
-    public static CborFormatterFactory FromResolver(CborFormatterResolver resolver)
-    {
-#if NET8_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(resolver);
-#else
-        if (resolver is null) { throw new ArgumentNullException(nameof(resolver)); }
-#endif
-        if (!resolver.HasFactoryProvider)
-        {
-            throw new ArgumentException("Single-type providers must be composed with CborCompositeResolver; factory composition requires a buffer-pair provider.", nameof(resolver));
-        }
-        return new ResolverFactory(resolver);
-    }
-
-    /// <summary>Copies a factory chain. The first factory serving a type wins.</summary>
+    /// <summary>Snapshots and flattens a factory chain. The first factory serving the requested buffer pair and value type wins.</summary>
     public static CborFormatterFactory Combine(params CborFormatterFactory[] factories)
     {
 #if NET8_0_OR_GREATER
@@ -51,48 +37,28 @@ public abstract class CborFormatterFactory
         {
             throw new ArgumentException("Factories cannot contain null.", nameof(factories));
         }
-        return new CompositeFactory(copy);
-    }
-
-    private sealed class ResolverFactory(CborFormatterResolver resolver) : CborFormatterFactory
-    {
-        public override object? CreateFormatter(Type writeBufferType, Type readBufferType, Type valueType)
-            => resolver.CreateProvidedFormatter(writeBufferType, readBufferType, valueType);
-#if NET9_0_OR_GREATER
-        public override object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
-            => resolver.CreateProvidedFormatter<TWriteBuffer, TReadBuffer>(valueType);
-#endif
+        if (copy.Length == 0) { throw new ArgumentException("At least one factory is required.", nameof(factories)); }
+        if (copy.Length == 1) { return copy[0]; }
+        var flattened = new List<CborFormatterFactory>(copy.Length);
+        foreach (var factory in copy)
+        {
+            if (factory is CompositeFactory composite) { flattened.AddRange(composite.Factories); }
+            else { flattened.Add(factory); }
+        }
+        return new CompositeFactory(flattened.ToArray());
     }
 
     private sealed class CompositeFactory(CborFormatterFactory[] factories) : CborFormatterFactory
     {
-        public override object? CreateFormatter(Type writeBufferType, Type readBufferType, Type valueType)
-        {
-            foreach (var factory in factories)
-            {
-                var formatter = factory.CreateFormatter(writeBufferType, readBufferType, valueType);
-                if (formatter is not null) { return formatter; }
-            }
-            return null;
-        }
-#if NET9_0_OR_GREATER
+        internal CborFormatterFactory[] Factories => factories;
         public override object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
         {
             foreach (var factory in factories)
             {
                 var formatter = factory.CreateFormatter<TWriteBuffer, TReadBuffer>(valueType);
                 if (formatter is not null) { return formatter; }
-                // A downlevel customization must keep precedence over later modern built-ins.
-#pragma warning disable CA2263 // Probe the stable Type overload implemented by downlevel providers.
-                if ((typeof(TWriteBuffer).IsByRefLike || typeof(TReadBuffer).IsByRefLike) &&
-                    factory.CreateFormatter(typeof(CompatibleArrayPoolListWriteBuffer), typeof(CompatibleReadOnlySpanReadBuffer), valueType) is not null)
-                {
-                    return Internal.CompatiblePairRequiredProvider.Instance;
-                }
-#pragma warning restore CA2263
             }
             return null;
         }
-#endif
     }
 }

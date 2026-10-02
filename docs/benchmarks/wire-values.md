@@ -1,5 +1,7 @@
 # Typed wire values — 2026-10-02
 
+These measurements use the paired graph implementation committed as 37c7d25, before the API cleanup. The wire format and bignum conversion algorithms are unchanged by that cleanup.
+
 `WireValueBenchmarks` measures positive values `(1 << bits) - 1` with 64, 65, and 2,048 magnitude bits. Their preferred CBOR encodings occupy 9, 11, and 260 bytes. The 64-bit case uses a major-type integer; larger cases use tag 2 and a definite byte string. The writer is reused and cleared between operations. Contiguous reads use a span; fragmented reads use a sequence of one-byte segments. Fixture creation, fragmentation, round-trip checks, and runtime-asset assertions run outside measurement.
 
 Sequential BenchmarkDotNet 0.15.8 runs use two launches, five warmups, eight measurement iterations per launch, and 100 ms target iteration time. Host: Windows 11 x64, Intel i7-13700F, SDK 10.0.401. Errors are half-widths of the reported 99.9% confidence intervals. Modern results use the net10.0 asset on .NET 10.0.12. Legacy results use an asserted netstandard2.0 asset on .NET 8.0.31; these are different runtime/asset combinations, not a controlled speedup comparison.

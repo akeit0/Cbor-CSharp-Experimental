@@ -1,7 +1,7 @@
 using Cbor;
 using Cbor.Samples;
 
-var options = new CborSerializerOptions(SampleResolver.Instance);
+var options = new CborSerializerOptions(SampleFactory.Instance);
 var message = new SampleEnvelope
 {
     Id = 42,

@@ -5,6 +5,12 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Cbor/Cbor.csproj" />
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <!-- Compiler-driver fixtures must understand the language used by the referenced runtime asset. -->
+    <Reference Include="Microsoft.CodeAnalysis">
+      <HintPath>$(MSBuildBinPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>$(MSBuildBinPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

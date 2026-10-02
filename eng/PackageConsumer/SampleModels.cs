@@ -86,6 +86,6 @@ public sealed class SampleTree<T>
     public List<SampleTree<T>>? Children { get; set; }
 }
 
-[CborResolver(typeof(SampleEnvelope), typeof(Dictionary<long, string>), typeof(SampleBox<int>),
+[CborFactory(typeof(SampleEnvelope), typeof(Dictionary<long, string>), typeof(SampleBox<int>),
     typeof(SampleBox<string>), typeof(SampleBox<SampleDerived>), typeof(SampleTree<int>))]
-public partial class SampleResolver;
+public partial class SampleFactory;

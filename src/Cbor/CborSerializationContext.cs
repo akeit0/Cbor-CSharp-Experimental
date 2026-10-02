@@ -22,36 +22,11 @@ public struct CborSerializationContext : IDisposable
         items = 0;
     }
 
-    /// <summary>Returns an ordinary-buffer adapter for an existing single-type provider.</summary>
-    public ICborFormatter<T> GetRequiredFormatter<T>() => options.Resolver.GetRequiredFormatter<T>();
-
     /// <summary>Completes the operation. Contexts retain no pooled formatter storage.</summary>
     public readonly void Dispose() { }
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
-
-    /// <summary>Serializes using the operation resolver and a borrowed buffer.</summary>
-    public void Serialize<TWriteBuffer, T>(ref TWriteBuffer buffer, T value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-        , allows ref struct
-#endif
-        => Serialize(ref buffer, value, options.Resolver.GetFormatter<TWriteBuffer, CompatibleReadOnlySpanReadBuffer, T>());
-
-    /// <summary>Serializes a child through its initialized formatter, charging one item.</summary>
-    public void Serialize<TWriteBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<T> formatter)
-        where TWriteBuffer : struct, IWriteBuffer
-    {
-#if NET8_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(formatter);
-#else
-        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
-#endif
-        ChargeItem();
-        formatter.Serialize(ref buffer, ref this, value);
-        CheckEncodedLength(buffer.BytesWritten);
-    }
 
     /// <summary>Serializes a child through its initialized formatter, charging one item.</summary>
     public void Serialize<TWriteBuffer, TReadBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)

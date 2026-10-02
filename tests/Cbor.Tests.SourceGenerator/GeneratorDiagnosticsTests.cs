@@ -8,11 +8,11 @@ namespace Cbor.Tests.SourceGenerator;
 public sealed class GeneratorDiagnosticsTests
 {
     [Theory]
-    [InlineData("private int Provider;")]
-    [InlineData("private class GeneratedFactory { }")]
+    [InlineData("private int CreateFormatter;")]
+    [InlineData("private int Instance;")]
     public void GeneratedFactoryMembersCannotCollideWithUserDeclarations(string member)
     {
-        var result = Run("using Cbor; [CborResolver(typeof(int))] public partial class Resolver { " + member + " }");
+        var result = Run("using Cbor; [CborFactory(typeof(int))] public partial class Resolver { " + member + " }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
         Assert.Empty(result.GeneratedSources);
@@ -23,7 +23,7 @@ public sealed class GeneratorDiagnosticsTests
     [InlineData("private class ObjectFormatter0<W, R> { }")]
     public void GeneratedFormatterMembersCannotCollideWithUserDeclarations(string member)
     {
-        var result = Run("using Cbor; [CborObject] public class Model { } [CborResolver(typeof(Model))] public partial class Resolver { " + member + " }");
+        var result = Run("using Cbor; [CborObject] public class Model { } [CborFactory(typeof(Model))] public partial class Resolver { " + member + " }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
         Assert.Empty(result.GeneratedSources);
@@ -33,15 +33,15 @@ public sealed class GeneratorDiagnosticsTests
     [Fact]
     public void HalfRootsAreRejectedWhenTheReferencedRuntimeDoesNotSupportHalf()
     {
-        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        var parse = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]);
         var tree = CSharpSyntaxTree.ParseText("""
             namespace Cbor {
                 [System.AttributeUsage(System.AttributeTargets.Class)]
-                public sealed class CborResolverAttribute : System.Attribute {
-                    public CborResolverAttribute(params System.Type[] roots) { }
+                public sealed class CborFactoryAttribute : System.Attribute {
+                    public CborFactoryAttribute(params System.Type[] roots) { }
                 }
             }
-            [Cbor.CborResolver(typeof(System.Half))] public partial class Resolver { }
+            [Cbor.CborFactory(typeof(System.Half))] public partial class Resolver { }
             """, parse);
         var references = References.Where(reference => reference.Display != typeof(CborObjectAttribute).Assembly.Location);
         var compilation = CSharpCompilation.Create("LegacyRuntime", [tree], references,
@@ -56,14 +56,14 @@ public sealed class GeneratorDiagnosticsTests
     [Fact]
     public void GeneratedCodeCompilesForAMutableAndConstructorBoundModel()
     {
-        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        var parse = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]);
         var tree = CSharpSyntaxTree.ParseText("""
             using Cbor;
             [CborObject] public class Model {
                 [CborKey(0)] public int Value { get; set; }
                 [CborConstructor] public Model(int value) { Value = value; }
             }
-            [CborResolver(typeof(Model))] public partial class Resolver { }
+            [CborFactory(typeof(Model))] public partial class Resolver { }
             """, parse);
         var compilation = CSharpCompilation.Create("CompiledGeneration", [tree], References,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -80,8 +80,8 @@ public sealed class GeneratorDiagnosticsTests
     {
         var result = Run("""
             using Cbor;
-            namespace A.B_C { [CborResolver(typeof(int))] public partial class Resolver { } }
-            namespace A_B.C { [CborResolver(typeof(int))] public partial class Resolver { } }
+            namespace A.B_C { [CborFactory(typeof(int))] public partial class Resolver { } }
+            namespace A_B.C { [CborFactory(typeof(int))] public partial class Resolver { } }
             """);
         Assert.Null(result.Exception);
         Assert.Empty(result.Diagnostics);
@@ -91,7 +91,7 @@ public sealed class GeneratorDiagnosticsTests
     [Fact]
     public void ResolverWithNoParameterlessConstructorIsDiagnosed()
     {
-        var result = Run("using Cbor; [CborResolver(typeof(int))] public partial class Resolver { public Resolver(int value) { } }");
+        var result = Run("using Cbor; [CborFactory(typeof(int))] public partial class Resolver { public Resolver(int value) { } }");
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
         Assert.Empty(result.GeneratedSources);
     }
@@ -101,7 +101,7 @@ public sealed class GeneratorDiagnosticsTests
     [InlineData("new System.Type[] { null }")]
     public void NullResolverRootsProduceDiagnosticsInsteadOfCrashing(string roots)
     {
-        var result = Run("using Cbor; [CborResolver(" + roots + ")] public partial class Resolver { }");
+        var result = Run("using Cbor; [CborFactory(" + roots + ")] public partial class Resolver { }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
         Assert.Empty(result.GeneratedSources);
@@ -116,7 +116,7 @@ public sealed class GeneratorDiagnosticsTests
     [InlineData("System.Half")]
     public void UnsupportedDictionaryKeysAreDiagnosedBeforeResolverInitialization(string key)
     {
-        var result = Run("using Cbor; [CborResolver(typeof(System.Collections.Generic.Dictionary<" + key + ", int>))] public partial class Resolver { }");
+        var result = Run("using Cbor; [CborFactory(typeof(System.Collections.Generic.Dictionary<" + key + ", int>))] public partial class Resolver { }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR002");
         Assert.Empty(result.GeneratedSources);
@@ -125,7 +125,7 @@ public sealed class GeneratorDiagnosticsTests
     [Fact]
     public void InternalGetterInAnotherAssemblyIsNotAccessibleToTheGeneratedFormatter()
     {
-        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        var parse = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]);
         var model = CSharpCompilation.Create("ExternalModel", [CSharpSyntaxTree.ParseText("""
             using Cbor;
             [CborObject] public class Model {
@@ -136,7 +136,7 @@ public sealed class GeneratorDiagnosticsTests
         var emit = model.Emit(stream);
         Assert.True(emit.Success, string.Join(Environment.NewLine, emit.Diagnostics));
         var compilation = CSharpCompilation.Create("Generation", [CSharpSyntaxTree.ParseText(
-            "using Cbor; [CborResolver(typeof(Model))] public partial class Resolver { }", parse)],
+            "using Cbor; [CborFactory(typeof(Model))] public partial class Resolver { }", parse)],
             References.Add(MetadataReference.CreateFromImage(stream.ToArray())));
         GeneratorDriver driver = CSharpGeneratorDriver.Create([new CborGenerator().AsSourceGenerator()], parseOptions: parse);
         var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
@@ -155,7 +155,7 @@ public sealed class GeneratorDiagnosticsTests
                 [CborKey(0), RequiredMember] public int Value { get; set; }
                 [CborConstructor] public Model(int value) { Value = value; }
             }
-            [CborResolver(typeof(Model))] public partial class Resolver { }
+            [CborFactory(typeof(Model))] public partial class Resolver { }
             """);
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001" && diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("SetsRequiredMembers", StringComparison.Ordinal));
@@ -177,7 +177,7 @@ public sealed class GeneratorDiagnosticsTests
     [InlineData("public class Model { [CborConstructor] public Model() { } [CborConstructor] public Model(int a) { } }", "CBOR001")]
     public void InvalidContractsProduceSpecificErrorsAndNoGeneratedResolver(string model, string expected)
     {
-        var result = Run("using Cbor; [CborObject] " + model + " [CborResolver(typeof(Model))] public partial class Resolver { }");
+        var result = Run("using Cbor; [CborObject] " + model + " [CborFactory(typeof(Model))] public partial class Resolver { }");
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == expected && diagnostic.Severity == DiagnosticSeverity.Error);
         Assert.Empty(result.GeneratedSources);
         Assert.Null(result.Exception);
@@ -190,7 +190,7 @@ public sealed class GeneratorDiagnosticsTests
     [InlineData("public partial class Resolver<T>")]
     public void InvalidResolverDeclarationsAreDiagnosed(string declaration)
     {
-        var result = Run("using Cbor; [CborResolver(typeof(int))] " + declaration + " { }");
+        var result = Run("using Cbor; [CborFactory(typeof(int))] " + declaration + " { }");
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
         Assert.Null(result.Exception);
     }
@@ -205,7 +205,7 @@ public sealed class GeneratorDiagnosticsTests
                 [CborKey(0)] public List<Node> Children { get; set; }
                 [CborKey(1)] public int? Value { get; set; }
             }
-            [CborResolver(typeof(Node))] public partial class Resolver { }
+            [CborFactory(typeof(Node))] public partial class Resolver { }
             """);
         Assert.Empty(result.Diagnostics);
         Assert.Null(result.Exception);
@@ -222,8 +222,8 @@ public sealed class GeneratorDiagnosticsTests
     public void GeneratorRespondsToAnEditedWireContractWithoutStaleOutput()
     {
         const string prefix = "using Cbor; [CborObject] public class Model { [CborKey(";
-        const string suffix = ")] public int A { get; set; } } [CborResolver(typeof(Model))] public partial class Resolver { }";
-        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        const string suffix = ")] public int A { get; set; } } [CborFactory(typeof(Model))] public partial class Resolver { }";
+        var parse = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]);
         var initial = CSharpCompilation.Create("Generation", [CSharpSyntaxTree.ParseText(prefix + "0" + suffix, parse)], References);
         GeneratorDriver driver = CSharpGeneratorDriver.Create([new CborGenerator().AsSourceGenerator()], parseOptions: parse);
         driver = driver.RunGenerators(initial);
@@ -239,7 +239,7 @@ public sealed class GeneratorDiagnosticsTests
 
     private static GeneratorRunResult Run(string source)
     {
-        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        var parse = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]);
         var compilation = CSharpCompilation.Create("Generation", [CSharpSyntaxTree.ParseText(source, parse)], References);
         GeneratorDriver driver = CSharpGeneratorDriver.Create([new CborGenerator().AsSourceGenerator()], parseOptions: parse);
         return driver.RunGenerators(compilation).GetRunResult().Results.Single();

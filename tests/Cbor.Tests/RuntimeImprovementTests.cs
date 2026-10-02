@@ -73,7 +73,7 @@ public sealed class RuntimeImprovementTests
     [Fact]
     public void GeneratedRepeatedTypesResolveOncePerPairAndRespectResolverOverrides()
     {
-        var resolver = new CountingResolver(TestResolver.Instance);
+        var resolver = new CountingFactory(ModelFactory.Instance);
         var options = new CborSerializerOptions(resolver);
         var value = new Point { X = 1, Y = 2 };
         byte[] bytes = CborSerializer.Serialize(value, options);
@@ -82,8 +82,8 @@ public sealed class RuntimeImprovementTests
         Assert.Equal(2, CborSerializer.Deserialize<Point>(bytes, options).Y);
         Assert.Equal(1, resolver.Count<int>());
 
-        var overrides = new CborFormatterRegistry().Add(new OffsetFormatter()).Build();
-        var alternate = new CborSerializerOptions(new CborCompositeResolver(overrides, TestResolver.Instance));
+        var overrides = new OffsetFactory(1);
+        var alternate = new CborSerializerOptions(CborFormatterFactory.Combine(overrides, ModelFactory.Instance));
         Assert.Equal("A200020103", Convert.ToHexString(CborSerializer.Serialize(value, alternate)));
         Assert.Equal(2, CborSerializer.Deserialize<Point>(Convert.FromHexString("A200020103"), alternate).Y);
         Assert.Equal(bytes, CborSerializer.Serialize(value, options));
@@ -92,7 +92,7 @@ public sealed class RuntimeImprovementTests
     [Fact]
     public void MissingOptionalMembersAndNullObjectsReuseTheInitializedGraph()
     {
-        var resolver = new CountingResolver(TestResolver.Instance);
+        var resolver = new CountingFactory(ModelFactory.Instance);
         var options = new CborSerializerOptions(resolver);
         Assert.Null(CborSerializer.Deserialize<Person>([0xf6], options));
         Assert.Equal(1, resolver.Count<int>());
@@ -109,8 +109,7 @@ public sealed class RuntimeImprovementTests
     public void DictionaryInsertionUsesComparerAndOneModernHashPerKey(string hex)
     {
         var comparer = new CountingComparer();
-        var options = new CborSerializerOptions(new CborFormatterRegistry()
-            .Add(new CborDictionaryFormatter<int, int>(comparer)).Build());
+        var options = new CborSerializerOptions(new DictionaryFactory<int, int>(comparer));
         var result = CborSerializer.Deserialize<Dictionary<int, int>>(Convert.FromHexString(hex), options);
         Assert.Equal(3, result.Count);
 #if NET8_0_OR_GREATER && !CBOR_NETSTANDARD20 && !CBOR_NETSTANDARD21
@@ -128,10 +127,8 @@ public sealed class RuntimeImprovementTests
     [InlineData("BF616101614102FF")]
     public void DuplicateDictionaryKeyFailsBeforeCallingItsValueFormatter(string hex)
     {
-        var formatter = new OffsetFormatter();
-        var options = new CborSerializerOptions(new CborFormatterRegistry()
-            .Add(new CborDictionaryFormatter<string, int>(StringComparer.OrdinalIgnoreCase))
-            .Add(formatter).Build());
+        var formatter = new OffsetFactory(1);
+        var options = new CborSerializerOptions(CborFormatterFactory.Combine(new DictionaryFactory<string, int>(StringComparer.OrdinalIgnoreCase), formatter));
         // Two differently encoded keys that the supplied comparer considers equal.
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Dictionary<string, int>>(Convert.FromHexString(hex), options));
         Assert.Equal(1, formatter.Reads);
@@ -141,11 +138,10 @@ public sealed class RuntimeImprovementTests
     public void DictionaryValueFailureAndComparerExceptionsPropagate()
     {
         var failure = new InvalidOperationException("comparer failure");
-        var options = new CborSerializerOptions(new CborFormatterRegistry()
-            .Add(new CborDictionaryFormatter<int, int>(new ThrowingComparer(failure))).Build());
+        var options = new CborSerializerOptions(new DictionaryFactory<int, int>(new ThrowingComparer(failure)));
         Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
             CborSerializer.Deserialize<Dictionary<int, int>>(Convert.FromHexString("A10001"), options)));
-        var ordinary = new CborSerializerOptions(new CborFormatterRegistry().Add(new CborDictionaryFormatter<int, int>()).Build());
+        var ordinary = new CborSerializerOptions(new DictionaryFactory<int, int>());
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Dictionary<int, int>>(Convert.FromHexString("A100F6"), ordinary));
         Assert.Equal(1, CborSerializer.Deserialize<Dictionary<int, int>>(Convert.FromHexString("A10001"), ordinary)[0]);
     }
@@ -206,14 +202,14 @@ public sealed class RuntimeImprovementTests
         Assert.Equal(expected, valid && fragmented.IsComplete);
     }
 
-    private sealed class CountingResolver(CborFormatterResolver inner) : CborFormatterResolver
+    private sealed class CountingFactory(CborFormatterFactory inner) : TestFactory
     {
         private readonly Dictionary<Type, int> counts = [];
-        public override ICborFormatter<T>? GetFormatter<T>()
+        protected override object? Create<W, R>(Type valueType)
         {
-            counts.TryGetValue(typeof(T), out int count);
-            counts[typeof(T)] = count + 1;
-            return inner.GetFormatter<T>();
+            counts.TryGetValue(valueType, out int count);
+            counts[valueType] = count + 1;
+            return From<W, R>(inner, valueType);
         }
 
         internal int Count<T>() => counts.TryGetValue(typeof(T), out int count) ? count : 0;
@@ -232,15 +228,4 @@ public sealed class RuntimeImprovementTests
         public int GetHashCode(int obj) => throw failure;
     }
 
-    private sealed class OffsetFormatter : ICborFormatter<int>
-    {
-        internal int Reads { get; private set; }
-        public void Serialize<W>(ref W buffer, ref CborSerializationContext context, int value)
-            where W : struct, IWriteBuffer
-            => buffer.WriteInt64(value + 1);
-
-        public int Deserialize<R>(ref R buffer, ref CborDeserializationContext context)
-            where R : struct, IReadBuffer
-        { Reads++; return checked((int)buffer.ReadInt64() - 1); }
-    }
 }

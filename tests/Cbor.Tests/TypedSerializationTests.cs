@@ -6,7 +6,7 @@ namespace Cbor.Tests;
 
 public sealed class TypedSerializationTests
 {
-    private static readonly CborSerializerOptions Options = new(TestResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(ModelFactory.Instance);
 
     [Fact]
     public void NestedPayloadCannotRequestMemoryBeyondTheRemainingEncodedBudget()
@@ -14,7 +14,7 @@ public sealed class TypedSerializationTests
         string text = new('a', 1024);
         string[] values = [text, text];
         var options = new CborSerializerOptions(
-            new CborFormatterRegistry().Add(new CborArrayFormatter<string>()).Build(),
+            ModelFactory.Instance,
             new CborReaderOptions(maxEncodedLength: 1536));
         var output = new ArrayBufferWriter<byte>();
         var buffer = new CompatibleBufferWriterWriteBuffer(output);
@@ -36,8 +36,7 @@ public sealed class TypedSerializationTests
     [Fact]
     public void CollectionLookupHoistingPreservesPerOperationOverrides()
     {
-        var options = new CborSerializerOptions(new CborCompositeResolver(
-            new CborFormatterRegistry().Add(new PlusOneFormatter()).Build(), TestResolver.Instance));
+        var options = new CborSerializerOptions(CborFormatterFactory.Combine(new OffsetFactory(1), ModelFactory.Instance));
         int[] values = [1, 2, 3];
         Assert.Equal("83020304", Convert.ToHexString(CborSerializer.Serialize(values, options)));
         Assert.Equal([1, 2, 3], CborSerializer.Deserialize<int[]>(Convert.FromHexString("83020304"), options));
@@ -61,8 +60,8 @@ public sealed class TypedSerializationTests
     [Fact]
     public void IntegerFormatterOverridesCannotChangeObjectWireKeys()
     {
-        var overrides = new CborFormatterRegistry().Add(new PlusOneFormatter()).Build();
-        var options = new CborSerializerOptions(new CborCompositeResolver(overrides, TestResolver.Instance));
+        var overrides = new OffsetFactory(1);
+        var options = new CborSerializerOptions(CborFormatterFactory.Combine(overrides, ModelFactory.Instance));
         byte[] encoded = CborSerializer.Serialize(new Person { Id = 1, Name = "Ada" }, options);
         Assert.Equal("A200020163416461", Convert.ToHexString(encoded));
         Assert.Equal(1, CborSerializer.Deserialize<Person>(Convert.FromHexString("A200020163416461"), options).Id);
@@ -149,11 +148,11 @@ public sealed class TypedSerializationTests
     {
         byte[] input = Convert.FromHexString("A30001016341646102818100");
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Person>(input,
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxDepth: 2))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxDepth: 2))));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Person>(input,
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxItems: 8))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxItems: 8))));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Person>(Convert.FromHexString("A300010163416461021801"),
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(requirePreferredEncoding: true))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(requirePreferredEncoding: true))));
     }
 
     [Fact]
@@ -161,9 +160,9 @@ public sealed class TypedSerializationTests
     {
         byte[] input = Convert.FromHexString("A30001028201020163416461");
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<Person>(input,
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxItems: 8))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxItems: 8))));
         Assert.Equal("Ada", CborSerializer.Deserialize<Person>(input,
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxItems: 9))).Name);
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxItems: 9))).Name);
     }
 
     [Fact]
@@ -208,7 +207,7 @@ public sealed class TypedSerializationTests
         var node = new TreeNode();
         node.Children = [node];
         Assert.Throws<InvalidDataException>(() => CborSerializer.Serialize(node,
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxDepth: 8))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxDepth: 8))));
     }
 
     [Theory]
@@ -226,15 +225,15 @@ public sealed class TypedSerializationTests
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<int[]>(Convert.FromHexString("9BFFFFFFFFFFFFFFFF"), Options));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<List<int>>(Convert.FromHexString("8301"), Options));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<int[]>(Convert.FromHexString("9F010203FF"),
-            new CborSerializerOptions(TestResolver.Instance, maxCollectionLength: 2)));
+            new CborSerializerOptions(ModelFactory.Instance, maxCollectionLength: 2)));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<int[]>(Convert.FromHexString("80"),
-            new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxDepth: 0))));
+            new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxDepth: 0))));
     }
 
     [Fact]
     public void NullableDoesNotChargeTheSameItemTwice()
     {
-        var options = new CborSerializerOptions(TestResolver.Instance, new CborReaderOptions(maxItems: 1));
+        var options = new CborSerializerOptions(ModelFactory.Instance, new CborReaderOptions(maxItems: 1));
         Assert.Equal(7, CborSerializer.Deserialize<int?>([7], options));
         Assert.Null(CborSerializer.Deserialize<int?>([0xf6], options));
         Assert.Equal([7], CborSerializer.Serialize((int?)7, options));
@@ -303,29 +302,18 @@ public sealed class TypedSerializationTests
     }
 
     [Fact]
-    public void ResolverSnapshotsDoNotChangeWhenTheBuilderChanges()
+    public void FactoryChainsRemainIndependentAndSafeForConcurrentUse()
     {
-        var registry = new CborFormatterRegistry();
-        var oldOptions = new CborSerializerOptions(registry.Build());
-        registry.Add(new PlusOneFormatter());
-        var newOptions = new CborSerializerOptions(registry.Build());
+        CborFormatterFactory[] providers = [CborFormatterFactory.Builtin];
+        var oldOptions = new CborSerializerOptions(CborFormatterFactory.Combine(providers));
+        providers[0] = new OffsetFactory(1);
+        var newOptions = new CborSerializerOptions(CborFormatterFactory.Combine(providers));
         Assert.Equal([1], CborSerializer.Serialize(1, oldOptions));
         Assert.Equal([2], CborSerializer.Serialize(1, newOptions));
         Assert.Equal(1, CborSerializer.Deserialize<int>([2], newOptions));
-        Assert.Throws<ArgumentException>(() => registry.Add(new PlusOneFormatter()));
         Parallel.For(0, 1000, i => Assert.Equal(i, CborSerializer.Deserialize<int>(CborSerializer.Serialize(i, newOptions), newOptions)));
     }
 
-    private sealed class PlusOneFormatter : ICborFormatter<int>
-    {
-        public void Serialize<W>(ref W buffer, ref CborSerializationContext context, int value)
-            where W : struct, IWriteBuffer
-            => buffer.WriteInt64(checked(value + 1));
-
-        public int Deserialize<R>(ref R buffer, ref CborDeserializationContext context)
-            where R : struct, IReadBuffer
-            => checked((int)buffer.ReadInt64() - 1);
-    }
 }
 
 [CborObject]
@@ -381,11 +369,11 @@ public sealed class TreeNode
     public List<TreeNode>? Children { get; set; }
 }
 
-[CborResolver(typeof(Person), typeof(ImmutablePerson), typeof(PersonRecord), typeof(Point), typeof(TreeNode),
+[CborFactory(typeof(string[]), typeof(Person), typeof(ImmutablePerson), typeof(PersonRecord), typeof(Point), typeof(TreeNode),
     typeof(Person[]), typeof(Dictionary<string, List<Person>>), typeof(int[]), typeof(List<int>), typeof(int?),
     typeof(Dictionary<string, int>), typeof(UnsignedState), typeof(SignedState), typeof(Dictionary<double, int>), typeof(NormalizedName),
     typeof(RequiredName), typeof(RequiredValue))]
-public partial class TestResolver;
+public partial class ModelFactory;
 
 public enum UnsignedState : ulong
 {

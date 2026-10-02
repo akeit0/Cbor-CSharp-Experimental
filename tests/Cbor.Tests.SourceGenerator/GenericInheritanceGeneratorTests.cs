@@ -23,7 +23,7 @@ public sealed class GenericInheritanceGeneratorTests
         var reference = MetadataReference.CreateFromImage(image.ToArray());
         var compilation = CreateCompilation("using Cbor; [CborObject] public class Derived<T> : ExternalBase<T> { " +
             "[CborConstructor] public Derived(T value) : base(value) { } } " +
-            "[CborResolver(typeof(Derived<int>))] public partial class Resolver { }").AddReferences(reference);
+            "[CborFactory(typeof(Derived<int>))] public partial class Resolver { }").AddReferences(reference);
         GeneratorDriver driver = CSharpGeneratorDriver.Create([new CborGenerator().AsSourceGenerator()],
             parseOptions: (CSharpParseOptions)compilation.SyntaxTrees.Single().Options);
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var generated, out var diagnostics);
@@ -49,7 +49,7 @@ public sealed class GenericInheritanceGeneratorTests
     [InlineData("record Box<T>([property: CborKey(0)] T Value);", "Box<int>")]
     public void ClosedGenericKindsCompileWithSubstitutedConstructors(string model, string root)
     {
-        Compile("using Cbor; [CborObject] public " + model + " [CborResolver(typeof(" + root + "))] public partial class Resolver { }");
+        Compile("using Cbor; [CborObject] public " + model + " [CborFactory(typeof(" + root + "))] public partial class Resolver { }");
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class GenericInheritanceGeneratorTests
                     [CborKey(1)] public U Second { get; set; }
                 }
             }
-            [CborResolver(typeof(Outer<int>.Inner<string>), typeof(Outer<string>.Inner<long>))]
+            [CborFactory(typeof(Outer<int>.Inner<string>), typeof(Outer<string>.Inner<long>))]
             public partial class Resolver { }
             """);
     }
@@ -83,7 +83,7 @@ public sealed class GenericInheritanceGeneratorTests
                 [CborKey(1)] public B Second { get; set; }
                 [CborKey(2)] public Pair<B,A> Next { get; set; }
             }
-            [CborResolver(typeof(Node<int>), typeof(Pair<int,string>))] public partial class Resolver { }
+            [CborFactory(typeof(Node<int>), typeof(Pair<int,string>))] public partial class Resolver { }
             """);
         Assert.Contains("global::Node<int>", source);
         Assert.Contains("global::Pair<string, int>", source);
@@ -99,7 +99,7 @@ public sealed class GenericInheritanceGeneratorTests
             [CborObject] public class Node<T> {
                 [CborKey(0)] public Node<List<int>> Fixed { get; set; }
             }
-            [CborResolver(typeof(Node<int>))] public partial class Resolver { }
+            [CborFactory(typeof(Node<int>))] public partial class Resolver { }
             """);
     }
 
@@ -108,7 +108,7 @@ public sealed class GenericInheritanceGeneratorTests
     [InlineData("System.Collections.Generic.List<>")]
     public void OpenGenericRootsAreDiagnosed(string root)
     {
-        var result = Run("using Cbor; [CborObject] public class Box<T> { } [CborResolver(typeof(" + root + "))] public partial class Resolver { }");
+        var result = Run("using Cbor; [CborObject] public class Box<T> { } [CborFactory(typeof(" + root + "))] public partial class Resolver { }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001" &&
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("closed types", StringComparison.Ordinal));
@@ -121,7 +121,7 @@ public sealed class GenericInheritanceGeneratorTests
     public void ExpandingGenericGraphProducesABoundedDiagnostic(string argument)
     {
         var result = Run("using Cbor; [CborObject] public class Node<T> { [CborKey(0)] public Node<" + argument +
-            "> Child { get; set; } } [CborResolver(typeof(Node<int>))] public partial class Resolver { }");
+            "> Child { get; set; } } [CborFactory(typeof(Node<int>))] public partial class Resolver { }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001" &&
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("expanding", StringComparison.Ordinal));
@@ -143,7 +143,7 @@ public sealed class GenericInheritanceGeneratorTests
                 public override int Value { get; set; }
                 [CborKey(1)] public string Label { get; set; }
             }
-            [CborResolver(typeof(Derived))] public partial class Resolver { }
+            [CborFactory(typeof(Derived))] public partial class Resolver { }
             """);
         Assert.Contains("buffer.WriteMapHeader(2UL)", generated);
         Assert.Contains("A required CBOR object member is missing", generated);
@@ -161,7 +161,7 @@ public sealed class GenericInheritanceGeneratorTests
     public void ConflictingInheritedContractsAreDiagnosed(string member, string message)
     {
         var result = Run("using Cbor; [CborObject] public class Base { [CborKey(0, Required=true)] public virtual int Value { get; set; } } " +
-            "[CborObject] public class Derived : Base { " + member + " } [CborResolver(typeof(Derived))] public partial class Resolver { }");
+            "[CborObject] public class Derived : Base { " + member + " } [CborFactory(typeof(Derived))] public partial class Resolver { }");
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Id == "CBOR001" &&
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains(message, StringComparison.Ordinal));
@@ -176,7 +176,7 @@ public sealed class GenericInheritanceGeneratorTests
             [CborObject] public class Base { [CborKey(0)] public int Value { get; set; } }
             public class Middle : Base { }
             [CborObject] public class Derived : Middle { }
-            [CborResolver(typeof(Derived))] public partial class Resolver { }
+            [CborFactory(typeof(Derived))] public partial class Resolver { }
             """);
         Assert.Null(result.Exception);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001" &&
@@ -192,7 +192,7 @@ public sealed class GenericInheritanceGeneratorTests
             using System.Runtime.CompilerServices;
             [CborObject] public class Base { [CborIgnore, RequiredMember] public int Value { get; set; } }
             [CborObject] public class Derived : Base { }
-            [CborResolver(typeof(Derived))] public partial class Resolver { }
+            [CborFactory(typeof(Derived))] public partial class Resolver { }
             """);
         Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001" &&
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("SetsRequiredMembers", StringComparison.Ordinal));
@@ -222,7 +222,7 @@ public sealed class GenericInheritanceGeneratorTests
     }
 
     private static CSharpCompilation CreateCompilation(string source) => CSharpCompilation.Create("GenericInheritance",
-        [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.CSharp10))], References,
+        [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: ["NET9_0_OR_GREATER"]))], References,
         new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
     private static ImmutableArray<MetadataReference> CreateReferences()

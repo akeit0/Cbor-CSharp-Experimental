@@ -13,6 +13,7 @@
     <Compile Include="../Cbor.Tests/RuntimeImprovementTests.cs" Link="RuntimeImprovementTests.cs" />
     <Compile Include="../Cbor.Tests/OperationResolutionTests.cs" Link="OperationResolutionTests.cs" />
     <Compile Include="../Cbor.Tests/WireValueTests.cs" Link="WireValueTests.cs" />
+    <Compile Include="../Cbor.Tests/TestFactories.cs" Link="TestFactories.cs" />
     <Compile Include="../Cbor.Tests/FactoryTests.cs" Link="FactoryTests.cs" />
     <Compile Include="../Cbor.Tests/GenericInheritanceTests.cs" Link="GenericInheritanceTests.cs" />
     <Compile Include="../../eng/PackageConsumer/SampleModels.cs" Link="SampleModels.cs" />

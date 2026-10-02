@@ -1,30 +1,9 @@
 using SerializerFoundation;
-#if !NET9_0_OR_GREATER
-// Keep the same provider shape as the modern virtual factory entry point.
-#pragma warning disable CA1822
-#endif
 namespace Cbor.Internal;
 
 internal sealed class BuiltinFormatterFactory : CborFormatterFactory
 {
-    public override object? CreateFormatter(Type writeBufferType, Type readBufferType, Type valueType)
-    {
-        if (writeBufferType == typeof(CompatibleArrayPoolListWriteBuffer) && readBufferType == typeof(CompatibleReadOnlySpanReadBuffer)) { return CreateFormatter<CompatibleArrayPoolListWriteBuffer, CompatibleReadOnlySpanReadBuffer>(valueType); }
-        if (writeBufferType == typeof(CompatibleArrayPoolListWriteBuffer) && readBufferType == typeof(CompatibleReadOnlySequenceReadBuffer)) { return CreateFormatter<CompatibleArrayPoolListWriteBuffer, CompatibleReadOnlySequenceReadBuffer>(valueType); }
-        if (writeBufferType == typeof(CompatibleBufferWriterWriteBuffer) && readBufferType == typeof(CompatibleReadOnlySpanReadBuffer)) { return CreateFormatter<CompatibleBufferWriterWriteBuffer, CompatibleReadOnlySpanReadBuffer>(valueType); }
-        if (writeBufferType == typeof(CompatibleBufferWriterWriteBuffer) && readBufferType == typeof(CompatibleReadOnlySequenceReadBuffer)) { return CreateFormatter<CompatibleBufferWriterWriteBuffer, CompatibleReadOnlySequenceReadBuffer>(valueType); }
-        return null;
-    }
-#if NET9_0_OR_GREATER
-    public override
-#else
-    public
-#endif
-    object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
-#if !NET9_0_OR_GREATER
-        where TWriteBuffer : struct, IWriteBuffer
-        where TReadBuffer : struct, IReadBuffer
-#endif
+    public override object? CreateFormatter<TWriteBuffer, TReadBuffer>(Type valueType)
     {
         if (valueType == typeof(CborInteger)) { return new IntegerFormatter<TWriteBuffer, TReadBuffer>(); }
         if (valueType == typeof(CborSimpleValue)) { return new SimpleValueFormatter<TWriteBuffer, TReadBuffer>(); }

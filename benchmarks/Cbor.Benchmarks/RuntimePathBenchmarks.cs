@@ -9,7 +9,7 @@ public class RuntimePathBenchmarks
 {
     private readonly byte[] encodedScalar = [1];
     private readonly int scalar = 1;
-    private static readonly CborSerializerOptions Options = new(RuntimePathResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(RuntimePathFactory.Instance);
     private readonly RepeatedMembers model = new() { A = 1, B = 2, C = 3, D = 4, E = 5, F = 6, G = 7, H = 8 };
     private byte[] encodedModel = [];
     private byte[] integerMap = [];
@@ -79,5 +79,5 @@ public sealed class RepeatedMembers
     [CborKey(7)] public int H { get; set; }
 }
 
-[CborResolver(typeof(RepeatedMembers), typeof(Dictionary<int, int>), typeof(Dictionary<string, int>))]
-public partial class RuntimePathResolver;
+[CborFactory(typeof(RepeatedMembers), typeof(Dictionary<int, int>), typeof(Dictionary<string, int>))]
+public partial class RuntimePathFactory;

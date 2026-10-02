@@ -8,8 +8,8 @@ internal static class WireValueChecks
 {
     internal static void Run()
     {
-        var factory = CborFormatterFactory.Combine(CborFormatterFactory.FromResolver(SampleWireResolver.Instance), CborFormatterFactory.Builtin);
-        var options = new CborSerializerOptions(factory.CreateResolver());
+        var factory = CborFormatterFactory.Combine(SampleWireFactory.Instance, CborFormatterFactory.Builtin);
+        var options = new CborSerializerOptions(factory);
         var value = new CborTagged<CborTagged<CborSimpleValue>>(ulong.MaxValue, new(1000, CborSimpleValue.Undefined));
         byte[] encoded = CborSerializer.Serialize(value, options);
         if (CborSerializer.Deserialize<CborTagged<CborTagged<CborSimpleValue>>>(encoded, options) != value)
@@ -34,5 +34,5 @@ internal static class WireValueChecks
     }
 }
 
-[CborResolver(typeof(CborTagged<CborTagged<CborSimpleValue>>), typeof(CborTagged<BigInteger>), typeof(CborTagged<Half>))]
-public partial class SampleWireResolver;
+[CborFactory(typeof(CborTagged<CborTagged<CborSimpleValue>>), typeof(CborTagged<BigInteger>), typeof(CborTagged<Half>))]
+public partial class SampleWireFactory;

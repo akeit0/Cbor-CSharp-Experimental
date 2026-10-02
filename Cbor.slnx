@@ -16,6 +16,7 @@
     <File Path="docs/design/typed-serializer.md" />
     <File Path="docs/benchmarks/runtime-paths.md" />
     <File Path="docs/benchmarks/operation-resolution.md" />
+    <File Path="docs/benchmarks/clean-contract.md" />
     <File Path="docs/benchmarks/wire-values.md" />
   </Folder>
   <Folder Name="/src/">
@@ -39,8 +40,5 @@
   </Folder>
   <Folder Name="/sandbox/">
     <Project Path="sandbox/Cbor.Sandbox/Cbor.Sandbox.csproj" />
-  </Folder>
-  <Folder Name="/eng/">
-    <Project Path="eng/LegacyProjectProvider/LegacyProjectProvider.csproj" />
   </Folder>
 </Solution>

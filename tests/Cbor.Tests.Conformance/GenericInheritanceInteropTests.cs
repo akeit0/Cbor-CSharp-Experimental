@@ -6,7 +6,7 @@ namespace Cbor.Tests.Conformance;
 
 public sealed class GenericInheritanceInteropTests
 {
-    private static readonly CborSerializerOptions Options = new(SampleResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(SampleFactory.Instance);
 
     [Fact]
     public void FlattenedGenericHierarchyMatchesAnIndependentCanonicalWriter()

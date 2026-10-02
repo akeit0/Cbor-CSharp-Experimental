@@ -55,7 +55,7 @@ public sealed class KeyComparerTests
     [Fact]
     public void CustomKeyTypesRequireAnExplicitComparer()
     {
-        Assert.Throws<NotSupportedException>(() => new CborDictionaryFormatter<Point, int>());
-        Assert.NotNull(new CborDictionaryFormatter<Point, int>(EqualityComparer<Point>.Default));
+        Assert.Throws<NotSupportedException>(() => new CborDictionaryFormatter<SerializerFoundation.CompatibleArrayPoolListWriteBuffer, SerializerFoundation.CompatibleReadOnlySpanReadBuffer, Point, int>());
+        Assert.NotNull(new CborDictionaryFormatter<SerializerFoundation.CompatibleArrayPoolListWriteBuffer, SerializerFoundation.CompatibleReadOnlySpanReadBuffer, Point, int>(EqualityComparer<Point>.Default));
     }
 }

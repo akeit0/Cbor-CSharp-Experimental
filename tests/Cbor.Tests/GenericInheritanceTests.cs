@@ -5,8 +5,8 @@ namespace Cbor.Tests;
 
 public sealed class GenericInheritanceTests
 {
-    private static readonly CborSerializerOptions Options = new(SampleResolver.Instance);
-    private static readonly CborSerializerOptions RequiredOptions = new(RequiredInheritanceResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(SampleFactory.Instance);
+    private static readonly CborSerializerOptions RequiredOptions = new(RequiredInheritanceFactory.Instance);
 
     [Fact]
     public void ClosedGenericInstantiationsHaveIndependentTypedFormatters()
@@ -15,8 +15,8 @@ public sealed class GenericInheritanceTests
         Assert.Equal("A10063416461", Convert.ToHexString(CborSerializer.Serialize(new SampleBox<string>("Ada"), Options)));
         Assert.Equal(42, CborSerializer.Deserialize<SampleBox<int>>(Convert.FromHexString("A100182A"), Options).Value);
         Assert.Equal("Ada", CborSerializer.Deserialize<SampleBox<string>>(Convert.FromHexString("A10063416461"), Options).Value);
-        Assert.NotNull(SampleResolver.Instance.GetFormatter<SampleBox<int>>());
-        Assert.Null(SampleResolver.Instance.GetFormatter<SampleBox<double>>());
+        Assert.NotNull(Options.Resolver.GetFormatter<SerializerFoundation.CompatibleArrayPoolListWriteBuffer, SerializerFoundation.CompatibleReadOnlySpanReadBuffer, SampleBox<int>>());
+        Assert.Throws<NotSupportedException>(() => CborSerializer.Serialize(new SampleBox<double>(1), Options));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public sealed class GenericInheritanceTests
         Assert.Equal([2, 3], decoded.Children!.Select(static node => node.Value));
         Assert.Empty(decoded.Children![0].Children!);
         Assert.Null(decoded.Children[1].Children);
-        var bounded = new CborSerializerOptions(SampleResolver.Instance, new CborReaderOptions(maxDepth: 2));
+        var bounded = new CborSerializerOptions(SampleFactory.Instance, new CborReaderOptions(maxDepth: 2));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<SampleTree<int>>(encoded, bounded));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Serialize(tree, bounded));
     }
@@ -112,5 +112,5 @@ public record BaseRecord([property: CborKey(0)] int Id);
 [CborObject]
 public sealed record DerivedRecord(int Id, [property: CborKey(1)] string Name) : BaseRecord(Id);
 
-[CborResolver(typeof(MutableRequired), typeof(ConstructorRequired), typeof(GenericPair<int>), typeof(DerivedRecord))]
-public partial class RequiredInheritanceResolver;
+[CborFactory(typeof(MutableRequired), typeof(ConstructorRequired), typeof(GenericPair<int>), typeof(DerivedRecord))]
+public partial class RequiredInheritanceFactory;

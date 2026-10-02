@@ -32,17 +32,17 @@ public sealed class CborIgnoreAttribute : Attribute;
 [AttributeUsage(AttributeTargets.Constructor, Inherited = false)]
 public sealed class CborConstructorAttribute : Attribute;
 
-/// <summary>Generates an AOT-safe resolver for the specified closed types and their reachable contracts.</summary>
+/// <summary>Generates an AOT-safe factory for the specified closed types and their reachable contracts.</summary>
 /// <remarks>Apply to a top-level, nongeneric partial class. Pass roots explicitly, then use the generated Instance property.</remarks>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public sealed class CborResolverAttribute : Attribute
+public sealed class CborFactoryAttribute : Attribute
 {
-    /// <summary>Defines the model and collection roots of a generated resolver.</summary>
-    public CborResolverAttribute(params Type[] types)
+    /// <summary>Defines the model and collection roots of a generated factory.</summary>
+    public CborFactoryAttribute(params Type[] types)
     {
         Types = types;
     }
 
-    /// <summary>Root types included in the generated resolver.</summary>
+    /// <summary>Root types included in the generated factory.</summary>
     public Type[] Types { get; }
 }

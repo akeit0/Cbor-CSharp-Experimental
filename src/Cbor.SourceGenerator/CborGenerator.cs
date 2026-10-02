@@ -23,26 +23,25 @@ public sealed class CborGenerator : IIncrementalGenerator
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var resolvers = context.SyntaxProvider.ForAttributeWithMetadataName(
-            "Cbor.CborResolverAttribute",
+        var factories = context.SyntaxProvider.ForAttributeWithMetadataName(
+            "Cbor.CborFactoryAttribute",
             static (node, _) => node is ClassDeclarationSyntax,
             static (attribute, _) => attribute);
-        context.RegisterSourceOutput(resolvers, static (output, attribute) => Generate(output, attribute));
+        context.RegisterSourceOutput(factories, static (output, attribute) => Generate(output, attribute));
     }
 
     private static void Generate(SourceProductionContext output, GeneratorAttributeSyntaxContext attribute)
     {
-        var resolver = (INamedTypeSymbol)attribute.TargetSymbol;
+        var factoryType = (INamedTypeSymbol)attribute.TargetSymbol;
         var declaration = (ClassDeclarationSyntax)attribute.TargetNode;
-        if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword) || resolver.ContainingType is not null ||
-            resolver.Arity != 0 || resolver.IsStatic || resolver.IsAbstract ||
+        if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword) || factoryType.ContainingType is not null ||
+            factoryType.Arity != 0 || factoryType.IsStatic || factoryType.IsAbstract ||
             declaration.Modifiers.Any(static modifier => modifier.ValueText == "file") ||
-            !resolver.InstanceConstructors.Any(static constructor => constructor.Parameters.Length == 0) ||
-            (resolver.BaseType is not null && resolver.BaseType.SpecialType != SpecialType.System_Object) ||
-            resolver.GetMembers("Instance").Length != 0 || resolver.GetMembers("GetFormatter").Length != 0 ||
-            resolver.GetMembers("Provider").Length != 0 || resolver.GetMembers("GeneratedFactory").Length != 0)
+            !factoryType.InstanceConstructors.Any(static constructor => constructor.Parameters.Length == 0) ||
+            (factoryType.BaseType is not null && factoryType.BaseType.SpecialType != SpecialType.System_Object) ||
+            factoryType.GetMembers("Instance").Length != 0 || factoryType.GetMembers("CreateFormatter").Length != 0)
         {
-            Report(output, resolver, "A CBOR resolver must be a top-level, non-file-local, nongeneric, nonabstract partial class with a parameterless constructor, without a base class or reserved Instance, GetFormatter, Provider, or GeneratedFactory members.");
+            Report(output, factoryType, "A CBOR factory must be a top-level, non-file-local, nongeneric, nonabstract partial class with a parameterless constructor, without a base class or reserved Instance or CreateFormatter members.");
             return;
         }
 
@@ -50,7 +49,7 @@ public sealed class CborGenerator : IIncrementalGenerator
         var arguments = attribute.Attributes[0].ConstructorArguments;
         if (arguments.Length != 1 || arguments[0].Kind != TypedConstantKind.Array || arguments[0].IsNull || arguments[0].Values.IsDefault)
         {
-            Report(output, resolver, "CborResolver requires a non-null array of closed root types.");
+            Report(output, factoryType, "CborFactory requires a non-null array of closed root types.");
             return;
         }
 
@@ -67,7 +66,7 @@ public sealed class CborGenerator : IIncrementalGenerator
             }
             else
             {
-                Report(output, resolver, "CborResolver root entries must be non-null closed types.");
+                Report(output, factoryType, "CborFactory root entries must be non-null closed types.");
                 valid = false;
             }
         }
@@ -91,12 +90,12 @@ public sealed class CborGenerator : IIncrementalGenerator
 
             if (visited.Count == MaxGraphTypes)
             {
-                Report(output, resolver, "The CBOR resolver graph exceeds 4096 distinct types. Split finite graphs into smaller resolvers; recursively expanding generic dependencies cannot be generated.");
+                Report(output, factoryType, "The CBOR factory graph exceeds 4096 distinct types. Split finite graphs into smaller factories; recursively expanding generic dependencies cannot be generated.");
                 valid = false;
                 break;
             }
 
-            valid &= Visit(output, type, graph, visited, pending, compilation, resolver);
+            valid &= Visit(output, type, graph, visited, pending, compilation, factoryType);
         }
 
         if (!valid)
@@ -106,46 +105,35 @@ public sealed class CborGenerator : IIncrementalGenerator
 
         for (int i = 0; i < graph.Count; i++)
         {
-            if (graph[i].Formatter is null && resolver.GetMembers("ObjectFormatter" + i.ToString(CultureInfo.InvariantCulture)).Length != 0)
+            if (graph[i].Formatter is null && factoryType.GetMembers("ObjectFormatter" + i.ToString(CultureInfo.InvariantCulture)).Length != 0)
             {
-                Report(output, resolver, "A CBOR resolver contains a member whose name conflicts with a generated ObjectFormatter type.");
+                Report(output, factoryType, "A CBOR factory contains a member whose name conflicts with a generated ObjectFormatter type.");
                 return;
             }
         }
 
         var code = new StringBuilder("// <auto-generated/>\n#nullable enable\nusing Cbor;\nusing SerializerFoundation;\n");
-        if (!resolver.ContainingNamespace.IsGlobalNamespace)
+        if (!factoryType.ContainingNamespace.IsGlobalNamespace)
         {
-            code.Append("namespace ").Append(resolver.ContainingNamespace.ToDisplayString()).Append(";\n");
+            code.Append("namespace ").Append(factoryType.ContainingNamespace.ToDisplayString()).Append(";\n");
         }
 
-        code.Append(AccessibilityText(resolver.DeclaredAccessibility)).Append(" partial class @")
-            .Append(resolver.Name).Append(" : global::Cbor.CborFormatterResolver\n{\n")
-            .Append("    /// <summary>Shared generated resolver for the explicitly rooted type graph.</summary>\n")
-            .Append("    public static ").Append(Name(resolver)).Append(" Instance { get; } = new ")
-            .Append(Name(resolver)).Append("();\n")
-            .Append("    protected override global::Cbor.CborFormatterFactory Provider { get; } = new GeneratedFactory();\n")
-            .Append("    private sealed class GeneratedFactory : global::Cbor.CborFormatterFactory\n    {\n")
-            .Append("        public override object? CreateFormatter(global::System.Type writeBufferType, global::System.Type readBufferType, global::System.Type valueType)\n")
-            .Append("        {\n")
-            .Append("            if (writeBufferType == typeof(global::SerializerFoundation.CompatibleArrayPoolListWriteBuffer) && readBufferType == typeof(global::SerializerFoundation.CompatibleReadOnlySpanReadBuffer)) return CreateFormatter<global::SerializerFoundation.CompatibleArrayPoolListWriteBuffer, global::SerializerFoundation.CompatibleReadOnlySpanReadBuffer>(valueType);\n")
-            .Append("            if (writeBufferType == typeof(global::SerializerFoundation.CompatibleArrayPoolListWriteBuffer) && readBufferType == typeof(global::SerializerFoundation.CompatibleReadOnlySequenceReadBuffer)) return CreateFormatter<global::SerializerFoundation.CompatibleArrayPoolListWriteBuffer, global::SerializerFoundation.CompatibleReadOnlySequenceReadBuffer>(valueType);\n")
-            .Append("            if (writeBufferType == typeof(global::SerializerFoundation.CompatibleBufferWriterWriteBuffer) && readBufferType == typeof(global::SerializerFoundation.CompatibleReadOnlySpanReadBuffer)) return CreateFormatter<global::SerializerFoundation.CompatibleBufferWriterWriteBuffer, global::SerializerFoundation.CompatibleReadOnlySpanReadBuffer>(valueType);\n")
-            .Append("            if (writeBufferType == typeof(global::SerializerFoundation.CompatibleBufferWriterWriteBuffer) && readBufferType == typeof(global::SerializerFoundation.CompatibleReadOnlySequenceReadBuffer)) return CreateFormatter<global::SerializerFoundation.CompatibleBufferWriterWriteBuffer, global::SerializerFoundation.CompatibleReadOnlySequenceReadBuffer>(valueType);\n")
-            .Append("            return null;\n        }\n")
-            .Append("#if NET9_0_OR_GREATER\n        public override\n#else\n        public\n#endif\n")
-            .Append("        object? CreateFormatter<W, R>(global::System.Type type)\n")
-            .Append("#if !NET9_0_OR_GREATER\n            where W : struct, global::SerializerFoundation.IWriteBuffer\n            where R : struct, global::SerializerFoundation.IReadBuffer\n#endif\n        {\n");
+        code.Append(AccessibilityText(factoryType.DeclaredAccessibility)).Append(" partial class @")
+            .Append(factoryType.Name).Append(" : global::Cbor.CborFormatterFactory\n{\n")
+            .Append("    /// <summary>Shared generated factory for the explicitly rooted type graph.</summary>\n")
+            .Append("    public static ").Append(Name(factoryType)).Append(" Instance { get; } = new ")
+            .Append(Name(factoryType)).Append("();\n")
+            .Append("    public override object? CreateFormatter<W, R>(global::System.Type type)\n    {\n");
         for (int i = 0; i < graph.Count; i++)
         {
             var node = graph[i];
             string formatter = node.Formatter is null ? "ObjectFormatter" + i.ToString(CultureInfo.InvariantCulture) + "<W, R>" :
                 node.Formatter.Insert(node.Formatter.IndexOf('<') + 1, "W, R, ");
-            code.Append("            if (type == typeof(").Append(Name(node.Type)).Append("))\n")
-                .Append("                return new ").Append(formatter).Append("();\n");
+            code.Append("        if (type == typeof(").Append(Name(node.Type)).Append("))\n")
+                .Append("            return new ").Append(formatter).Append("();\n");
         }
 
-        code.Append("            return null;\n        }\n    }\n");
+        code.Append("        return null;\n    }\n");
         for (int i = 0; i < graph.Count; i++)
         {
             if (graph[i].Formatter is null)
@@ -162,12 +150,12 @@ public sealed class CborGenerator : IIncrementalGenerator
         }
 
         code.Append("}\n");
-        string hint = resolver.ToDisplayString() + ".Cbor.g.cs";
+        string hint = factoryType.ToDisplayString() + ".Cbor.g.cs";
         output.AddSource(hint, SourceText.From(code.ToString(), Encoding.UTF8));
     }
 
     private static bool Visit(SourceProductionContext output, ITypeSymbol type, List<Node> graph, HashSet<ITypeSymbol> visited, Queue<ITypeSymbol> pending,
-        Compilation compilation, INamedTypeSymbol resolver)
+        Compilation compilation, INamedTypeSymbol factoryType)
     {
         if (!visited.Add(type))
         {
@@ -188,7 +176,7 @@ public sealed class CborGenerator : IIncrementalGenerator
 
         if (type is INamedTypeSymbol named)
         {
-            if (named.TypeKind == TypeKind.Enum && Accessible(named, compilation, resolver))
+            if (named.TypeKind == TypeKind.Enum && Accessible(named, compilation, factoryType))
             {
                 graph.Add(new Node(type, null));
                 return true;
@@ -231,7 +219,7 @@ public sealed class CborGenerator : IIncrementalGenerator
 
             if (HasAttribute(named, "Cbor.CborObjectAttribute"))
             {
-                var node = ReadObject(output, named, compilation, resolver);
+                var node = ReadObject(output, named, compilation, factoryType);
                 if (node is null)
                 {
                     return false;
@@ -249,7 +237,7 @@ public sealed class CborGenerator : IIncrementalGenerator
 
         output.ReportDiagnostic(Diagnostic.Create(UnsupportedType, LocationOf(type),
             "No generated or built-in CBOR formatter exists for " + type.ToDisplayString() +
-            ". Add an explicit CborObject contract or remove this type from the resolver graph."));
+            ". Add an explicit CborObject contract or remove this type from the factory graph."));
         return false;
     }
 
@@ -307,11 +295,11 @@ public sealed class CborGenerator : IIncrementalGenerator
         return true;
     }
 
-    private static Node? ReadObject(SourceProductionContext output, INamedTypeSymbol type, Compilation compilation, INamedTypeSymbol resolver)
+    private static Node? ReadObject(SourceProductionContext output, INamedTypeSymbol type, Compilation compilation, INamedTypeSymbol factoryType)
     {
         if (type.IsAbstract || type.IsRefLikeType ||
             type.TypeKind is not (TypeKind.Class or TypeKind.Struct) ||
-            !Accessible(type, compilation, resolver) ||
+            !Accessible(type, compilation, factoryType) ||
             type.DeclaringSyntaxReferences.Any(static reference => reference.GetSyntax() is TypeDeclarationSyntax declaration &&
                 declaration.Modifiers.Any(static modifier => modifier.ValueText == "file")))
         {
@@ -379,7 +367,7 @@ public sealed class CborGenerator : IIncrementalGenerator
             bool writable;
             if (symbol is IPropertySymbol property)
             {
-                if (property.IsIndexer || property.GetMethod is null || !Accessible(property.GetMethod, compilation, resolver))
+                if (property.IsIndexer || property.GetMethod is null || !Accessible(property.GetMethod, compilation, factoryType))
                 {
                     Report(output, symbol, "A keyed property must have an accessible getter and cannot be an indexer.");
                     valid = false;
@@ -387,12 +375,12 @@ public sealed class CborGenerator : IIncrementalGenerator
                 }
 
                 memberType = property.Type;
-                writable = property.SetMethod is not null && Accessible(property.SetMethod, compilation, resolver);
+                writable = property.SetMethod is not null && Accessible(property.SetMethod, compilation, factoryType);
             }
             else
             {
                 var field = (IFieldSymbol)symbol;
-                if (!Accessible(field, compilation, resolver))
+                if (!Accessible(field, compilation, factoryType))
                 {
                     Report(output, symbol, "A keyed field must be accessible to the generated formatter.");
                     valid = false;
@@ -424,7 +412,7 @@ public sealed class CborGenerator : IIncrementalGenerator
         IMethodSymbol? selected = null;
         foreach (var constructor in candidates)
         {
-            if (!Accessible(constructor, compilation, resolver))
+            if (!Accessible(constructor, compilation, factoryType))
             {
                 continue;
             }
@@ -767,8 +755,8 @@ public sealed class CborGenerator : IIncrementalGenerator
     private static bool IsHalf(ITypeSymbol type) => type is INamedTypeSymbol { Name: "Half", Arity: 0, ContainingType: null } named &&
         named.ContainingNamespace.ToDisplayString() == "System";
 
-    private static bool Accessible(ISymbol symbol, Compilation compilation, INamedTypeSymbol resolver) =>
-        compilation.IsSymbolAccessibleWithin(symbol, resolver);
+    private static bool Accessible(ISymbol symbol, Compilation compilation, INamedTypeSymbol factoryType) =>
+        compilation.IsSymbolAccessibleWithin(symbol, factoryType);
 
     private static bool IsDictionaryKey(ITypeSymbol type) =>
         type.TypeKind == TypeKind.Enum || type.SpecialType is

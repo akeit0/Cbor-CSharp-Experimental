@@ -7,8 +7,7 @@ namespace Cbor.Benchmarks;
 [MemoryDiagnoser]
 public class TypedPathBenchmarks
 {
-    private static readonly CborSerializerOptions Options = new(new CborCompositeResolver(
-        new CborFormatterRegistry().Add(new CborArrayFormatter<int>()).Build(), ReviewResolver.Instance));
+    private static readonly CborSerializerOptions Options = new(ReviewFactory.Instance);
     private string text = string.Empty;
     private int[] values = [];
     private byte[] encodedValues = [];
@@ -66,5 +65,5 @@ public sealed class ReviewModel
     public int Value { get; set; }
 }
 
-[CborResolver(typeof(ReviewModel))]
-public partial class ReviewResolver;
+[CborFactory(typeof(ReviewModel), typeof(int[]))]
+public partial class ReviewFactory;

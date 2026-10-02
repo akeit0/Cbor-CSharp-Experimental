@@ -27,36 +27,11 @@ public struct CborDeserializationContext : IDisposable
         items = 0;
     }
 
-    /// <summary>Returns an ordinary-buffer adapter for an existing single-type provider.</summary>
-    public ICborFormatter<T> GetRequiredFormatter<T>() => options.Resolver.GetRequiredFormatter<T>();
-
     /// <summary>Completes the operation. Contexts retain no pooled formatter storage.</summary>
     public readonly void Dispose() { }
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
-
-    /// <summary>Reads using the operation resolver and a borrowed buffer.</summary>
-    public T Deserialize<TReadBuffer, T>(ref TReadBuffer buffer)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-        , allows ref struct
-#endif
-        => Deserialize(ref buffer, options.Resolver.GetFormatter<CompatibleArrayPoolListWriteBuffer, TReadBuffer, T>());
-
-    /// <summary>Reads a child through its initialized formatter, charging and checking one item.</summary>
-    public T Deserialize<TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<T> formatter)
-        where TReadBuffer : struct, IReadBuffer
-    {
-#if NET8_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(formatter);
-#else
-        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
-#endif
-        ChargeItem();
-        CheckNextValue(ref buffer);
-        return formatter.Deserialize(ref buffer, ref this);
-    }
 
     /// <summary>Reads a child through its initialized formatter, charging and checking one item.</summary>
     public T Deserialize<TWriteBuffer, TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)

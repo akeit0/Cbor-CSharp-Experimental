@@ -2,7 +2,6 @@ using Cbor.Testing;
 using Cbor;
 
 Cbor.Samples.WireValueChecks.Run();
-LegacyProviderChecks.Run();
 
 ulong[] values = [0, 23, 24, 255, 256, 65535, 65536, uint.MaxValue, (ulong)uint.MaxValue + 1, ulong.MaxValue];
 string[] textValues = [new string('a', 256), string.Concat(Enumerable.Repeat("水😀", 64))];
@@ -113,7 +112,7 @@ if (Cbor.CborValidation.TryValidate(deep, new Cbor.CborReaderOptions(maxDepth: 1
     throw new InvalidOperationException("Native AOT iterative deep validation failed.");
 }
 
-var typedOptions = new CborSerializerOptions(Cbor.Samples.SampleResolver.Instance);
+var typedOptions = new CborSerializerOptions(Cbor.Samples.SampleFactory.Instance);
 if (CborSerializer.Deserialize<string>(Convert.FromHexString("7F61686169FF")) != "hi" ||
     !CborSerializer.Deserialize<byte[]>(Convert.FromHexString("5F4201024103FF")).SequenceEqual(new byte[] { 1, 2, 3 }))
 {

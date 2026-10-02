@@ -7,7 +7,7 @@ namespace Cbor.Tests;
 
 public sealed class WireValueTests
 {
-    private static readonly CborSerializerOptions Options = new(WireValueResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(WireValueFactory.Instance);
 
     [Fact]
     public void CompleteIntegerRangeUsesMajorTypesWithoutSignedNarrowing()
@@ -116,10 +116,10 @@ public sealed class WireValueTests
     [Fact]
     public void TaggedAndBignumChildrenShareDepthItemsStringAndEncodingLimits()
     {
-        var shallow = new CborSerializerOptions(WireValueResolver.Instance, new(maxDepth: 0));
+        var shallow = new CborSerializerOptions(WireValueFactory.Instance, new(maxDepth: 0));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Serialize(new CborTagged<int>(0, 1), shallow));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<CborTagged<int>>([0xc0, 1], shallow));
-        var oneItem = new CborSerializerOptions(WireValueResolver.Instance, new(maxItems: 1));
+        var oneItem = new CborSerializerOptions(WireValueFactory.Instance, new(maxItems: 1));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Serialize(new CborTagged<int>(0, 1), oneItem));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<CborTagged<int>>([0xc0, 1], oneItem));
         Assert.Throws<InvalidDataException>(() => CborSerializer.Serialize(BigInteger.One << 64, oneItem));
@@ -140,8 +140,8 @@ public sealed class WireValueTests
     [Fact]
     public void TagContentUsesOverridesButBignumStructuralBytesKeepTheirContract()
     {
-        var overrides = new CborFormatterRegistry().Add<int>(new OffsetFormatter()).Add<byte[]>(new RejectBytesFormatter()).Build();
-        var options = new CborSerializerOptions(new CborCompositeResolver(overrides, WireValueResolver.Instance));
+        var overrides = CborFormatterFactory.Combine(new OffsetFactory(1), new RejectBytesFactory());
+        var options = new CborSerializerOptions(CborFormatterFactory.Combine(overrides, WireValueFactory.Instance));
         Assert.Equal("C002", Convert.ToHexString(CborSerializer.Serialize(new CborTagged<int>(0, 1), options)));
         Assert.Equal(1, CborSerializer.Deserialize<CborTagged<int>>([0xc0, 2], options).Value);
         Assert.Equal(BigInteger.One << 64, CborSerializer.Deserialize<BigInteger>(CborSerializer.Serialize(BigInteger.One << 64, options), options));
@@ -230,7 +230,7 @@ public sealed class WireValueTests
                 Assert.Equal((ushort)i, BitConverter.HalfToUInt16Bits(decoded));
             }
         }
-        AssertRoundTrip(new CborTagged<Half>(1000, (Half)1.5), new(HalfWireResolver.Instance));
+        AssertRoundTrip(new CborTagged<Half>(1000, (Half)1.5), new(HalfWireFactory.Instance));
         Assert.Throws<OverflowException>(() => CborSerializer.Deserialize<Half>(CborSerializer.Serialize(70000d)));
         Assert.Throws<OverflowException>(() => CborSerializer.Deserialize<Half>(CborSerializer.Serialize(Math.BitIncrement((double)Half.MaxValue))));
         Assert.Throws<OverflowException>(() => CborSerializer.Deserialize<Half>(CborSerializer.Serialize(Math.BitDecrement((double)Half.MinValue))));
@@ -260,28 +260,32 @@ public sealed class WireValueTests
         Assert.Equal(encoded, writer.WrittenSpan.ToArray());
     }
 
-    private sealed class OffsetFormatter : ICborFormatter<int>
+    private sealed class RejectBytesFactory : TestFactory
     {
-        public void Serialize<W>(ref W buffer, ref CborSerializationContext context, int value) where W : struct, IWriteBuffer
-            => buffer.WriteInt64(value + 1);
-        public int Deserialize<R>(ref R buffer, ref CborDeserializationContext context) where R : struct, IReadBuffer
-            => checked((int)buffer.ReadInt64()) - 1;
+        protected override object? Create<W, R>(Type valueType) => valueType == typeof(byte[]) ? new Formatter<W, R>() : null;
+        private sealed class Formatter<W, R> : ICborFormatter<W, R, byte[]>
+            where W : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+            where R : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            public void Initialize(CborFormatterResolver resolver) { }
+            public void Serialize(ref W buffer, ref CborSerializationContext context, byte[] value) => throw new InvalidOperationException("Unexpected byte[] override.");
+            public byte[] Deserialize(ref R buffer, ref CborDeserializationContext context) => throw new InvalidOperationException("Unexpected byte[] override.");
+        }
     }
 
-    private sealed class RejectBytesFormatter : ICborFormatter<byte[]>
-    {
-        public void Serialize<W>(ref W buffer, ref CborSerializationContext context, byte[] value) where W : struct, IWriteBuffer
-            => throw new InvalidOperationException("Unexpected byte[] override.");
-        public byte[] Deserialize<R>(ref R buffer, ref CborDeserializationContext context) where R : struct, IReadBuffer
-            => throw new InvalidOperationException("Unexpected byte[] override.");
-    }
 }
 
-[CborResolver(typeof(CborTagged<CborTagged<CborSimpleValue>>), typeof(CborTagged<string>), typeof(CborTagged<int>),
+[CborFactory(typeof(CborTagged<CborTagged<CborSimpleValue>>), typeof(CborTagged<string>), typeof(CborTagged<int>),
     typeof(CborTagged<BigInteger>), typeof(CborTagged<List<CborInteger>>))]
-public partial class WireValueResolver;
+public partial class WireValueFactory;
 
 #if !CBOR_NETSTANDARD20 && !CBOR_NETSTANDARD21
-[CborResolver(typeof(CborTagged<Half>))]
-public partial class HalfWireResolver;
+[CborFactory(typeof(CborTagged<Half>))]
+public partial class HalfWireFactory;
 #endif

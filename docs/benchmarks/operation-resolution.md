@@ -1,5 +1,7 @@
 # Buffer-pair formatter measurements — 2026-10-02
 
+This record compares bce6094 with the paired graph implementation committed as 37c7d25, before the API cleanup. See [the cleanup measurements](clean-contract.md) for the current contract.
+
 `NestedModelBenchmarks` uses one or 64 orders, each containing eight line objects. Three model types, two list types, and repeated scalar/string dependencies exercise realistic nested dispatch. Payloads occupy 136 and 8,358 bytes. `RuntimePathBenchmarks` supplies eight-integer-field and default-scalar controls. Construction, fixture encoding, round-trip checks, and runtime-asset assertions run outside measurement.
 
 The baseline is commit `bce6094`, which uses generated per-object locals plus an operation-local pooled formatter cache. The revised implementation closes each formatter over its write/read buffers, acquires child fields in Initialize, and publishes completed graphs atomically. Fields and lock-free root lookup reuse selections across operations, following MessagePack-CSharp v4. Operation contexts carry budgets rather than formatter storage.

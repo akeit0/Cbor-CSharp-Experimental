@@ -6,7 +6,7 @@ namespace Cbor.Benchmarks;
 [MemoryDiagnoser]
 public class NestedModelBenchmarks
 {
-    private static readonly CborSerializerOptions Options = new(NestedBenchmarkResolver.Instance);
+    private static readonly CborSerializerOptions Options = new(NestedBenchmarkFactory.Instance);
     private OrderBatch batch = null!;
     private byte[] encoded = [];
 
@@ -68,5 +68,5 @@ public sealed class BenchLine
     [CborKey(2)] public int Price { get; set; }
 }
 
-[CborResolver(typeof(OrderBatch))]
-public partial class NestedBenchmarkResolver;
+[CborFactory(typeof(OrderBatch))]
+public partial class NestedBenchmarkFactory;
