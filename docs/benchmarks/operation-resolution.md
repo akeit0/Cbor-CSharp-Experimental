@@ -1,70 +1,67 @@
-# Operation formatter resolution — 2026-10-02
+# Buffer-pair formatter measurements — 2026-10-02
 
-`NestedModelBenchmarks` serializes and deserializes an order batch containing one or 64 orders, each with eight line objects. Every order has an identifier, customer string, and list of lines; every line has a SKU, quantity, and price. The graph therefore exercises three model types, two list types, and repeated scalar/string dependencies. The small batch encodes to 136 bytes and the large batch to 8,358 bytes. Construction, serialization of decode fixtures, and shape checks run in setup outside measurement.
+`NestedModelBenchmarks` uses one or 64 orders, each containing eight line objects. Three model types, two list types, and repeated scalar/string dependencies exercise realistic nested dispatch. Payloads occupy 136 and 8,358 bytes. `RuntimePathBenchmarks` supplies eight-integer-field and default-scalar controls. Construction, fixture encoding, round-trip checks, and runtime-asset assertions run outside measurement.
 
-The retained implementation resolves each used type once through operation context storage. Generated typed locals still avoid repeated lookups within a single object's member loop. Two inline entries avoid a rental for flat models; wider graphs use a pooled table that grows at half occupancy and clears returned arrays. Exact type keys make reference reinterpretation safe. Custom overrides remain scoped to the supplied options and the first completed resolution in that operation. No formatter dependency graph is initialized globally.
+The baseline is commit `bce6094`, which uses generated per-object locals plus an operation-local pooled formatter cache. The revised implementation closes each formatter over its write/read buffers, acquires child fields in Initialize, and publishes completed graphs atomically. Fields and lock-free root lookup reuse selections across operations, following MessagePack-CSharp v4. Operation contexts carry budgets rather than formatter storage.
 
-## Measurements
+Sequential BenchmarkDotNet 0.15.8 runs use two launches, five warmups, eight measurement iterations per launch, and 500 ms target iteration time. Host: Windows 11 x64, Intel i7-13700F, SDK 10.0.401. Modern runs load the asserted net10.0 asset on .NET 10.0.12; compatibility runs load the asserted netstandard2.0 asset on .NET 8.0.31. Errors are half-widths of reported 99.9% confidence intervals. No builds, tests, or other suites ran concurrently with measurement.
 
-Final measurements compare commit `1b11f35` with the retained implementation. A separate baseline checkout uses the same benchmark fixtures. Runs are sequential, with no concurrent builds or tests. BenchmarkDotNet 0.15.8 uses two launches, five warmups, and eight measurement iterations per launch on Windows x64, Intel i7-13700F, SDK 10.0.401. Modern runs use .NET 10.0.12 with the net10.0 asset; compatibility runs use .NET 8.0.31 and explicitly reference the netstandard2.0 asset. This is evidence about those assets on these JIT hosts, not a measurement of .NET Framework, Mono, other platforms, or MessagePack parity.
+## Corrected asset selection
 
-### .NET 10 asset
+Earlier compatibility timing tables and derived dictionary speedup percentages are withdrawn. BenchmarkDotNet's generated project reselected a newer library asset through transitive project references even when the parent benchmark forced netstandard2.0. Both baseline and revised compatibility fixtures now use an explicit assembly HintPath, a build-only project reference, and a direct Foundation dependency. Every benchmark worker checks TargetFrameworkAttribute and fails an incorrect asset selection. The following measurements replace the earlier claims.
 
-| Workload | Before mean ± error | Retained mean ± error | Allocation before/after |
+## .NET 10 asset
+
+| Workload | Baseline mean ± error | Revised mean ± error | Allocation baseline/revised |
 | --- | ---: | ---: | ---: |
-| Encode 8 lines | 527.20 ± 15.85 ns | 457.10 ± 5.93 ns | 160 B / 160 B |
-| Decode 8 lines | 584.90 ± 10.12 ns | 592.70 ± 8.80 ns | 816 B / 816 B |
-| Encode 512 lines | 29.21 ± 1.02 µs | 21.24 ± 0.22 µs | 8384 B / 8384 B |
-| Decode 512 lines | 33.93 ± 0.91 µs | 27.75 ± 0.15 µs | 46680 B / 46680 B |
-| Encode eight integer fields | 73.40 ± 0.98 ns | 76.86 ± 0.54 ns | 48 B / 48 B |
-| Decode eight integer fields | 76.36 ± 1.47 ns | 74.27 ± 0.84 ns | 48 B / 48 B |
-| Encode default integer scalar | 14.00 ± 0.11 ns | 14.78 ± 0.09 ns | 32 B / 32 B |
-| Decode default integer scalar | 6.79 ± 0.02 ns | 7.94 ± 0.12 ns | 0 B / 0 B |
+| Encode 8 lines | 456.40 ± 10.66 ns | 213.80 ± 7.47 ns | 160 B / 160 B |
+| Decode 8 lines | 593.50 ± 7.60 ns | 320.10 ± 2.27 ns | 816 B / 816 B |
+| Encode 512 lines | 21.59 ± 0.04 µs | 13.20 ± 0.39 µs | 8384 B / 8384 B |
+| Decode 512 lines | 28.40 ± 0.40 µs | 19.12 ± 0.30 µs | 46680 B / 46680 B |
+| Encode scalar | 14.91 ± 0.20 ns | 13.37 ± 2.53 ns | 32 B / 32 B |
+| Decode scalar | 7.69 ± 0.37 ns | 2.28 ± 0.03 ns | 0 B / 0 B |
+| Encode eight integer fields | 74.86 ± 0.46 ns | 42.52 ± 0.66 ns | 48 B / 48 B |
+| Decode eight integer fields | 74.64 ± 1.50 ns | 37.31 ± 0.27 ns | 48 B / 48 B |
 
-### netstandard2.0 asset on .NET 8
+## netstandard2.0 asset on .NET 8
 
-| Workload | Before mean ± error | Retained mean ± error | Allocation before/after |
+| Workload | Baseline mean ± error | Revised mean ± error | Allocation baseline/revised |
 | --- | ---: | ---: | ---: |
-| Encode 8 lines | 826.50 ± 13.64 ns | 785.50 ± 5.36 ns | 160 B / 160 B |
-| Decode 8 lines | 913.80 ± 4.73 ns | 915.80 ± 3.90 ns | 816 B / 816 B |
-| Encode 512 lines | 43.92 ± 0.71 µs | 31.07 ± 0.25 µs | 8384 B / 8384 B |
-| Decode 512 lines | 51.38 ± 0.42 µs | 40.09 ± 0.50 µs | 46680 B / 46680 B |
-| Encode eight integer fields | 127.30 ± 0.71 ns | 143.56 ± 4.12 ns | 48 B / 48 B |
-| Decode eight integer fields | 109.30 ± 1.35 ns | 119.55 ± 1.39 ns | 48 B / 48 B |
-| Encode default integer scalar | 39.38 ± 0.27 ns | 39.78 ± 1.18 ns | 32 B / 32 B |
-| Decode default integer scalar | 13.37 ± 0.06 ns | 15.07 ± 0.18 ns | 0 B / 0 B |
+| Encode 8 lines | 787.80 ± 12.82 ns | 431.70 ± 4.23 ns | 160 B / 160 B |
+| Decode 8 lines | 932.30 ± 16.73 ns | 482.20 ± 7.59 ns | 816 B / 816 B |
+| Encode 512 lines | 32.20 ± 0.37 µs | 23.74 ± 0.25 µs | 8384 B / 8384 B |
+| Decode 512 lines | 40.95 ± 1.24 µs | 27.45 ± 0.21 µs | 46680 B / 46680 B |
+| Encode scalar | 39.12 ± 0.77 ns | 28.79 ± 0.39 ns | 32 B / 32 B |
+| Decode scalar | 14.91 ± 0.17 ns | 4.26 ± 0.02 ns | 0 B / 0 B |
+| Encode eight integer fields | 136.45 ± 0.46 ns | 97.06 ± 1.20 ns | 48 B / 48 B |
+| Decode eight integer fields | 122.85 ± 1.05 ns | 57.24 ± 0.49 ns | 48 B / 48 B |
 
-Errors are half-widths of the reported 99.9% confidence intervals. Nested 512-line encoding improves by about 27% on the modern asset and 29% on the oldest asset; decoding improves by about 18% and 22%. The retained operation cache has a measured fixed cost on flat models: around 3.5 ns for modern encoding and 16/10 ns for oldest-asset encoding/decoding. Default scalar decoding also costs roughly 1–2 ns more. These small-message tradeoffs are retained explicitly rather than described as universal speedups; all reported allocation counts are unchanged.
+The measured 512-line workload improves by approximately 39% encode / 33% decode on the modern asset and 26% encode / 33% decode on the oldest asset, with unchanged allocations. Flat models and scalar reads improve in these runs. The modern scalar-encode interval overlaps the baseline; that control does not establish a clear improvement. Warm measurements exclude graph construction, pool-cold buffer growth, and resolver lifetime costs. They do not measure MessagePack, .NET Framework, Mono, or other operating systems.
 
-Initial three-warmup ShortRun results varied substantially while tiered optimization settled. They are retained as experiment logs but are not used as the final before/after comparison. In particular, early flat-model figures suggested a much larger regression than the longer modern runs established. The final tables include flat-model and default scalar controls as well as nested workloads. Allocation measurements exclude setup and report managed bytes per operation; cold initialization or depleted/trimmed pools can still allocate. Tests exercise zero cache allocation for warmed 25-type graphs and release of custom formatter references on success and failure.
+## Dictionary fallback
 
-## Compatibility dictionary evaluation
+.NET 8+ uses CollectionsMarshal.GetValueRefOrAddDefault and rejects duplicate keys before value decoding. Tests assert one hash per valid insertion, supplied comparer identity, and unchanged formatter/comparer exceptions. The .NET Standard reference APIs provide no safe entry-reference insertion, so those assets retain ContainsKey/Add. Reserving through Add then assigning requires another lookup; decoding values before TryAdd changes duplicate error priority and side effects. Private entry layouts would depend on CLR internals.
 
-.NET Standard dictionaries still use ContainsKey before decoding a value, then Add. The public APIs in these reference assemblies expose no safe entry-reference insertion. Decoding the value before TryAdd changes duplicate error priority, reader consumption, and custom formatter side effects. Reserving with Add(key, default) then assigning the decoded value still requires a second lookup. A comparer wrapper changes the supplied comparer identity; accessing private Dictionary entry layouts would add runtime-specific assumptions.
+A prior temporary thread-local hash-reuse prototype was rejected after mixed, noisy results. It introduced hidden shared-comparer state and still performed two probes. It is absent from the implementation. The supported .NET Standard fallback remains an open quality gap.
 
-A rejected prototype reused a built-in process-keyed hash across ContainsKey/Add using temporary thread-local scopes, saving and restoring state through nested value reads. It kept custom comparer behavior and identity intact and introduced no measured managed allocation. Three-iteration ShortRun compatibility results were mixed and noisy: integer maps moved from approximately 116.5 to 104.3 µs, while short string maps moved from 134.3 to 153.5 µs. The string prototype's 99.9% interval was ±100.1 µs. This is insufficient evidence for a general speedup, and the hidden thread state adds complexity to globally shared comparers. The prototype was removed. It did not reduce dictionary probes; it only reused the expensive hash computation.
+Current verified-asset runs decode 1,024-entry maps on the same .NET 8.0.31 host, with the same policies, compatible buffers, and measurement settings above. This compares two shipped library assets; it does not isolate insertion probe count from all other conditional implementation differences.
 
-A dedicated .NET 8 runtime asset uses the public entry-reference API directly, with no comparer wrappers, thread state, reflection, or additional per-call allocation. .NET 8 can use this API while retaining Compatible buffers; ref-struct buffer support remains a separate .NET 9 capability. Forced netstandard2.0 and netstandard2.1 test projects retain legacy coverage.
-
-### .NET 8 dictionary insertion, same .NET 8 host
-
-| Workload | Before mean ± error | Retained mean ± error | Allocation before/after |
+| Workload | netstandard2.0 mean ± error | net8.0 mean ± error | Allocation for both |
 | --- | ---: | ---: | ---: |
-| Decode 1,024 integer pairs | 55.85 ± 0.52 µs | 42.75 ± 0.35 µs | 22192 B / 22192 B |
-| Decode 1,024 short-string pairs | 67.31 ± 0.37 µs | 55.47 ± 0.22 µs | 63704 B / 63704 B |
+| Integer keys/values | 47.26 ± 0.392 µs | 33.46 ± 0.475 µs | 21.67 KB |
+| String keys/integer values | 61.01 ± 0.587 µs | 46.77 ± 0.266 µs | 62.21 KB |
 
-This compares the retained netstandard2.0 fallback with the dedicated .NET 8 asset on the same runtime. The new asset reduces integer-map time by about 23% and string-map time by about 18%, with identical allocations. Tests assert one hash per inserted key for .NET 8+ assets, supplied comparer identity, duplicate rejection before the value formatter, and unchanged formatter/comparer exceptions. The legacy definite-map test records six hashes for three keys; the initially unallocated indefinite-map dictionary records five.
-
-A compatible optimization for the residual .NET Standard fallback must retain duplicate rejection before value decoding, the caller's comparer instance, original custom-comparer exception behavior, and short-key performance. The .NET Standard fallback gap remains open in the quality review.
+Each worker asserts its loaded asset. Local reports are in artifacts/benchmarks/pair-dict-compat and pair-dict-net8.
 
 ## Reproduce
 
-Finish builds/tests before benchmarking. Run these commands separately; do not run the suites concurrently.
+Build and test first. Run suites sequentially, using the same fixtures in a baseline checkout of bce6094; apply the assembly-reference and runtime-assertion benchmark fixes to that checkout without changing its library sources.
 
 ```powershell
-dotnet run --project benchmarks/Cbor.Benchmarks -c Release -- --filter '*NestedModelBenchmarks*' '*RuntimePathBenchmarks.*RepeatedMembers' '*RuntimePathBenchmarks.*Scalar' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --artifacts artifacts/benchmarks/operation-modern
-dotnet run --project benchmarks/Cbor.Benchmarks.NetStandard20 -c Release -- --filter '*NestedModelBenchmarks*' '*RuntimePathBenchmarks.*RepeatedMembers' '*RuntimePathBenchmarks.*Scalar' '*RuntimePathBenchmarks.Decode*Map*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --artifacts artifacts/benchmarks/operation-compat
-dotnet run --project benchmarks/Cbor.Benchmarks.Net8 -c Release -- --filter '*RuntimePathBenchmarks.Decode*Map*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --artifacts artifacts/benchmarks/operation-net8
+dotnet run --project benchmarks/Cbor.Benchmarks -c Release -- --filter '*NestedModelBenchmarks*' '*RuntimePathBenchmarks.*RepeatedMembers' '*RuntimePathBenchmarks.*Scalar' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts artifacts/benchmarks/pair-after-modern
+dotnet run --project benchmarks/Cbor.Benchmarks.NetStandard20 -c Release -- --filter '*NestedModelBenchmarks*' '*RuntimePathBenchmarks.*RepeatedMembers' '*RuntimePathBenchmarks.*Scalar' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts artifacts/benchmarks/pair-after-compat
+dotnet run --project benchmarks/Cbor.Benchmarks.NetStandard20 -c Release -- --filter '*RuntimePathBenchmarks.Decode*Map*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts artifacts/benchmarks/pair-dict-compat
+dotnet run --project benchmarks/Cbor.Benchmarks.Net8 -c Release -- --filter '*RuntimePathBenchmarks.Decode*Map*' --job short --warmupCount 5 --iterationCount 8 --launchCount 2 --iterationTime 500 --artifacts artifacts/benchmarks/pair-dict-net8
 ```
 
-Local full reports are under artifacts/benchmarks/operation-final-before-modern, operation-final-before-compat, operation-final-before-scalar-modern, operation-final-before-scalar-compat, operation-retained-after-modern, operation-retained-after-compat, and operation-net8-dictionary. Artifacts are ignored by Git; fixtures and this record are versioned.
+Local reports reside in artifacts/benchmarks/pair-before-modern, pair-after-modern, pair-before-compat, and pair-after-compat. Artifacts are ignored; fixtures, assertions, and this record are versioned.

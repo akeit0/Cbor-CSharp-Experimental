@@ -71,7 +71,7 @@ public sealed class RuntimeImprovementTests
     }
 
     [Fact]
-    public void GeneratedRepeatedTypesResolveOnceAndRespectEachOperationsResolver()
+    public void GeneratedRepeatedTypesResolveOncePerPairAndRespectResolverOverrides()
     {
         var resolver = new CountingResolver(TestResolver.Instance);
         var options = new CborSerializerOptions(resolver);
@@ -80,7 +80,7 @@ public sealed class RuntimeImprovementTests
         Assert.Equal(1, resolver.Count<int>());
         Assert.Equal("A200010102", Convert.ToHexString(bytes));
         Assert.Equal(2, CborSerializer.Deserialize<Point>(bytes, options).Y);
-        Assert.Equal(2, resolver.Count<int>());
+        Assert.Equal(1, resolver.Count<int>());
 
         var overrides = new CborFormatterRegistry().Add(new OffsetFormatter()).Build();
         var alternate = new CborSerializerOptions(new CborCompositeResolver(overrides, TestResolver.Instance));
@@ -90,15 +90,15 @@ public sealed class RuntimeImprovementTests
     }
 
     [Fact]
-    public void MissingOptionalMembersAndNullObjectsDoNotResolveUnusedFormatters()
+    public void MissingOptionalMembersAndNullObjectsReuseTheInitializedGraph()
     {
         var resolver = new CountingResolver(TestResolver.Instance);
         var options = new CborSerializerOptions(resolver);
         Assert.Null(CborSerializer.Deserialize<Person>([0xf6], options));
-        Assert.Equal(0, resolver.Count<int>());
+        Assert.Equal(1, resolver.Count<int>());
         Assert.Equal(1, CborSerializer.Deserialize<Person>(Convert.FromHexString("A10001"), options).Id);
         Assert.Equal(1, resolver.Count<int>());
-        Assert.Equal(0, resolver.Count<string>());
+        Assert.Equal(1, resolver.Count<string>());
         var person = CborSerializer.Deserialize<Person>(CborSerializer.Serialize(new Person { Id = 3, Name = null }, options), options);
         Assert.Null(person.Name);
     }
@@ -237,16 +237,10 @@ public sealed class RuntimeImprovementTests
         internal int Reads { get; private set; }
         public void Serialize<W>(ref W buffer, ref CborSerializationContext context, int value)
             where W : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-                , allows ref struct
-#endif
             => buffer.WriteInt64(value + 1);
 
         public int Deserialize<R>(ref R buffer, ref CborDeserializationContext context)
             where R : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-                , allows ref struct
-#endif
         { Reads++; return checked((int)buffer.ReadInt64() - 1); }
     }
 }

@@ -30,6 +30,10 @@ internal static class CborTokenDecoder
     {
         argument = 0;
         length = 0;
+        if (source.IsEmpty)
+        {
+            return CborDecodeResult.NeedMoreData;
+        }
         int additional = source[0] & CborEncoding.AdditionalInformationMask;
         if (additional > CborEncoding.UInt64Argument)
         {

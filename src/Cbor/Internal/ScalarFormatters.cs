@@ -2,198 +2,219 @@ using SerializerFoundation;
 
 namespace Cbor.Internal;
 
-internal sealed class BooleanFormatter : ICborFormatter<bool>
+internal sealed class BooleanFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, bool>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, bool value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, bool value)
         => buffer.WriteBoolean(value);
-
-    public bool Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public bool Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => buffer.ReadBoolean();
 }
 
-internal sealed class ByteFormatter : ICborFormatter<byte>
+internal sealed class ByteFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, byte>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, byte value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, byte value)
         => buffer.WriteUInt64(value);
-
-    public byte Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public byte Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((byte)buffer.ReadUInt64());
 }
 
-internal sealed class SByteFormatter : ICborFormatter<sbyte>
+internal sealed class SByteFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, sbyte>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, sbyte value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, sbyte value)
         => buffer.WriteInt64(value);
-
-    public sbyte Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public sbyte Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((sbyte)buffer.ReadInt64());
 }
 
-internal sealed class Int16Formatter : ICborFormatter<short>
+internal sealed class Int16Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, short>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, short value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, short value)
         => buffer.WriteInt64(value);
-
-    public short Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public short Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((short)buffer.ReadInt64());
 }
 
-internal sealed class UInt16Formatter : ICborFormatter<ushort>
+internal sealed class UInt16Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, ushort>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, ushort value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, ushort value)
         => buffer.WriteUInt64(value);
-
-    public ushort Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public ushort Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((ushort)buffer.ReadUInt64());
 }
 
-internal sealed class Int32Formatter : ICborFormatter<int>
+internal sealed class Int32Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, int>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, int value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, int value)
         => buffer.WriteInt64(value);
-
-    public int Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public int Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((int)buffer.ReadInt64());
 }
 
-internal sealed class UInt32Formatter : ICborFormatter<uint>
+internal sealed class UInt32Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, uint>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, uint value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, uint value)
         => buffer.WriteUInt64(value);
-
-    public uint Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public uint Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => checked((uint)buffer.ReadUInt64());
 }
 
-internal sealed class Int64Formatter : ICborFormatter<long>
+internal sealed class Int64Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, long>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, long value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, long value)
         => buffer.WriteInt64(value);
-
-    public long Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public long Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => buffer.ReadInt64();
 }
 
-internal sealed class UInt64Formatter : ICborFormatter<ulong>
+internal sealed class UInt64Formatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, ulong>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, ulong value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, ulong value)
         => buffer.WriteUInt64(value);
-
-    public ulong Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public ulong Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => buffer.ReadUInt64();
 }
 
-internal sealed class DoubleFormatter : ICborFormatter<double>
+internal sealed class DoubleFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, double>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, double value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, double value)
         => buffer.WriteDouble(value);
-
-    public double Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public double Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => buffer.ReadDouble();
 }
 
-internal sealed class SingleFormatter : ICborFormatter<float>
+internal sealed class SingleFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, float>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, float value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, float value)
         => buffer.WriteDouble(value);
-
-    public float Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public float Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         double value = buffer.ReadDouble();
-        float result = (float)value;
-        if (float.IsInfinity(result) && !double.IsInfinity(value))
+        if (!double.IsInfinity(value) && (value > float.MaxValue || value < -float.MaxValue))
         {
             throw new OverflowException("The CBOR floating-point value exceeds Single's finite range.");
         }
 
-        return result;
+        return (float)value;
     }
 }

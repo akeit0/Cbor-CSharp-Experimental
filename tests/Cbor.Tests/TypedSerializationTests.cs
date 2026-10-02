@@ -320,16 +320,10 @@ public sealed class TypedSerializationTests
     {
         public void Serialize<W>(ref W buffer, ref CborSerializationContext context, int value)
             where W : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
             => buffer.WriteInt64(checked(value + 1));
 
         public int Deserialize<R>(ref R buffer, ref CborDeserializationContext context)
             where R : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
             => checked((int)buffer.ReadInt64() - 1);
     }
 }

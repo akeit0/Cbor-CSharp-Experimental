@@ -8,6 +8,7 @@
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="BenchmarkDotNet" />
     <Compile Include="../Cbor.Benchmarks/Program.cs" Link="Program.cs" />
+    <Compile Include="../Cbor.Benchmarks/RuntimeAssetCheck.cs" Link="RuntimeAssetCheck.cs" />
     <Compile Include="../Cbor.Benchmarks/NestedModelBenchmarks.cs" Link="NestedModelBenchmarks.cs" />
     <Compile Include="../Cbor.Benchmarks/RuntimePathBenchmarks.cs" Link="RuntimePathBenchmarks.cs" />
   </ItemGroup>

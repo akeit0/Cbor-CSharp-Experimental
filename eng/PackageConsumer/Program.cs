@@ -2,6 +2,8 @@ using System.Buffers;
 using Cbor;
 using SerializerFoundation;
 
+LegacyProviderChecks.Run();
+
 var output = new ArrayBufferWriter<byte>();
 #if NET9_0_OR_GREATER
 var writer = new BufferWriterWriteBuffer(output);
@@ -69,4 +71,5 @@ if (typed.Id != 42 || typed.Name != "水😀" || typed.Values is not { Count: 2 
 }
 
 GenericModelChecks.Run(typedOptions);
+Cbor.Samples.WireValueChecks.Run();
 Console.WriteLine("Installed CBOR package consumer passed: primitives and generated mutable/immutable, generic, and inherited models.");

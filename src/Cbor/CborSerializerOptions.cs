@@ -9,6 +9,13 @@ public sealed class CborSerializerOptions
     /// <summary>Creates options. A supplied resolver takes precedence over built-in scalar formatters.</summary>
     public CborSerializerOptions(CborFormatterResolver? resolver = null, CborReaderOptions? readerOptions = null,
         int maxCollectionLength = 1_000_000, int maxStringLength = 16 * 1024 * 1024)
+        : this(false, resolver, readerOptions, maxCollectionLength, maxStringLength)
+    {
+    }
+
+    /// <summary>Creates options with an explicit compatible-buffer preference, retaining immutable resolver and limits.</summary>
+    public CborSerializerOptions(bool useCompatibleBuffers, CborFormatterResolver? resolver = null, CborReaderOptions? readerOptions = null,
+        int maxCollectionLength = 1_000_000, int maxStringLength = 16 * 1024 * 1024)
     {
 #if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(maxCollectionLength);
@@ -30,6 +37,7 @@ public sealed class CborSerializerOptions
         ReaderOptions = readerOptions ?? CborReaderOptions.Default;
         MaxCollectionLength = maxCollectionLength;
         MaxStringLength = maxStringLength;
+        UseCompatibleBuffers = useCompatibleBuffers;
     }
 
     /// <summary>Resolver shared by all nested values in an operation.</summary>
@@ -43,4 +51,7 @@ public sealed class CborSerializerOptions
 
     /// <summary>Maximum byte-string bytes or text-string UTF-8 bytes, including all indefinite chunks.</summary>
     public int MaxStringLength { get; }
+
+    /// <summary>Uses ordinary struct buffers so formatters compiled for older targets remain usable on modern runtimes.</summary>
+    public bool UseCompatibleBuffers { get; }
 }

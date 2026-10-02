@@ -21,6 +21,7 @@ public class RuntimePathBenchmarks
     [GlobalSetup]
     public void Setup()
     {
+        RuntimeAssetCheck.Verify();
         encodedModel = CborSerializer.Serialize(model, Options);
         integerMap = CborSerializer.Serialize(Enumerable.Range(0, 1024).ToDictionary(static i => i, static i => i), Options);
         stringMap = CborSerializer.Serialize(Enumerable.Range(0, 1024).ToDictionary(

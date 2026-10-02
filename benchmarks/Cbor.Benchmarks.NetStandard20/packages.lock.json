@@ -20,6 +20,16 @@
           "System.Management": "9.0.5"
         }
       },
+      "SerializerFoundation": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "rTxoBMs0Ze4QlSreGzvVnJLkBeOz5hXPMzW6+l9YkkfhTVFCVY9sETnrM3T5ReaDVWXewtJb6hyXqveAkf/p4A==",
+        "dependencies": {
+          "System.IO.Pipelines": "10.0.0",
+          "System.Runtime.CompilerServices.Unsafe": "6.1.2"
+        }
+      },
       "BenchmarkDotNet.Annotations": {
         "type": "Transitive",
         "resolved": "0.15.8",
@@ -228,12 +238,6 @@
         "resolved": "8.0.5",
         "contentHash": "0f1B50Ss7rqxXiaBJyzUu9bWFOO2/zSlifZ/UNMdiIpDYe4cY4LQQicP4nirK1OS31I43rn062UIJ1Q9bpmHpg=="
       },
-      "cbor": {
-        "type": "Project",
-        "dependencies": {
-          "SerializerFoundation": "[1.0.0, )"
-        }
-      },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "CentralTransitive",
         "requested": "[3.11.0, )",
@@ -250,16 +254,6 @@
           "Microsoft.CodeAnalysis.Common": "[4.14.0]",
           "System.Collections.Immutable": "9.0.0",
           "System.Reflection.Metadata": "9.0.0"
-        }
-      },
-      "SerializerFoundation": {
-        "type": "CentralTransitive",
-        "requested": "[1.0.0, )",
-        "resolved": "1.0.0",
-        "contentHash": "rTxoBMs0Ze4QlSreGzvVnJLkBeOz5hXPMzW6+l9YkkfhTVFCVY9sETnrM3T5ReaDVWXewtJb6hyXqveAkf/p4A==",
-        "dependencies": {
-          "System.IO.Pipelines": "10.0.0",
-          "System.Runtime.CompilerServices.Unsafe": "6.1.2"
         }
       }
     }

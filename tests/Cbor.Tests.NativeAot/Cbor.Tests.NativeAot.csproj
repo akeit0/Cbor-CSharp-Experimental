@@ -13,6 +13,9 @@
   <ItemGroup>
     <Compile Include="../../eng/PackageConsumer/SampleModels.cs" Link="SampleModels.cs" />
     <Compile Include="../../eng/PackageConsumer/GenericModelChecks.cs" Link="GenericModelChecks.cs" />
+    <Compile Include="../../eng/PackageConsumer/WireValueChecks.cs" Link="WireValueChecks.cs" />
+    <Compile Include="../../eng/PackageConsumer/LegacyProviderChecks.cs" Link="LegacyProviderChecks.cs" />
+    <ProjectReference Include="../../eng/LegacyProjectProvider/LegacyProjectProvider.csproj" />
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/Cbor/Cbor.csproj" />
     <Compile Include="../Shared/IntegerHarness.cs" Link="IntegerHarness.cs" />

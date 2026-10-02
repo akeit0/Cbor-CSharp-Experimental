@@ -3,14 +3,20 @@ using SerializerFoundation;
 
 namespace Cbor.Internal;
 
-internal sealed class StringFormatter : ICborFormatter<string?>
-{
-
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, string? value)
-        where TWriteBuffer : struct, IWriteBuffer
+internal sealed class StringFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, string?>
+    where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+    , allows ref struct
 #endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+{
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, string? value)
     {
         if (value is null)
         {
@@ -23,12 +29,7 @@ internal sealed class StringFormatter : ICborFormatter<string?>
         context.CheckEncodedLength(buffer.BytesWritten, (long)byteCount + CborPrimitives.GetHeaderLength((ulong)byteCount));
         CborWriteBufferExtensions.WriteTextStringKnownLength(ref buffer, value, byteCount);
     }
-
-    public string? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public string? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         if (CborDeserializationContext.TryReadNull(ref buffer))
         {
@@ -45,13 +46,20 @@ internal sealed class StringFormatter : ICborFormatter<string?>
     }
 }
 
-internal sealed class ByteStringFormatter : ICborFormatter<byte[]?>
-{
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, byte[]? value)
-        where TWriteBuffer : struct, IWriteBuffer
+internal sealed class ByteStringFormatter<TWriteBuffer, TReadBuffer> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, byte[]?>
+    where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+    , allows ref struct
 #endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+{
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver) { }
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, byte[]? value)
     {
         if (value is null)
         {
@@ -63,12 +71,7 @@ internal sealed class ByteStringFormatter : ICborFormatter<byte[]?>
         context.CheckEncodedLength(buffer.BytesWritten, (long)value.Length + CborPrimitives.GetHeaderLength((ulong)value.Length));
         buffer.WriteByteString(value);
     }
-
-    public byte[]? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public byte[]? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         if (CborDeserializationContext.TryReadNull(ref buffer))
         {

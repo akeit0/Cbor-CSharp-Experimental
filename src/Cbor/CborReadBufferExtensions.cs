@@ -333,7 +333,7 @@ public static class CborReadBufferExtensions
         return payload;
     }
 
-    private static CborHeader ValidateStringHeader<TBuffer>(ref TBuffer buffer, CborMajorType major, int maxLength)
+    internal static CborHeader ValidateStringHeader<TBuffer>(ref TBuffer buffer, CborMajorType major, int maxLength)
         where TBuffer : struct, IReadBuffer
 #if NET9_0_OR_GREATER
         , allows ref struct

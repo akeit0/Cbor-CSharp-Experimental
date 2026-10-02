@@ -1,6 +1,9 @@
 using Cbor.Testing;
 using Cbor;
 
+Cbor.Samples.WireValueChecks.Run();
+LegacyProviderChecks.Run();
+
 ulong[] values = [0, 23, 24, 255, 256, 65535, 65536, uint.MaxValue, (ulong)uint.MaxValue + 1, ulong.MaxValue];
 string[] textValues = [new string('a', 256), string.Concat(Enumerable.Repeat("水😀", 64))];
 foreach (string text in textValues)

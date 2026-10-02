@@ -15,7 +15,7 @@ Aim for a complete serializer and the reference project's depth of evidence. Pro
 
 ## Implementation boundaries
 
-The experimental public API and model attributes live in Cbor. ICborFormatter<T>, immutable resolver snapshots, per-operation contexts, serializer entry points, and explicit generated resolver roots are implemented. No release API baseline is frozen yet. The unsigned-integer prototype has been removed; samples and installed consumers use generated models.
+The experimental public API and model attributes live in Cbor. ICborFormatter<TWriteBuffer, TReadBuffer, T>, factory composition, initialized resolver graphs, immutable options, per-operation contexts, serializer entry points, and explicit generated resolver roots are implemented. ICborFormatter<T> remains an ordinary-buffer compatibility contract. No release API baseline is frozen yet. The unsigned-integer prototype has been removed; samples and installed consumers use generated models.
 
 Current evidence includes RFC Appendix A/F fixtures, exhaustive half decoding, execution of all five runtime assets, bounded iterative traversal, strict UTF-8, independent generated-value/mutation comparisons, native publishing, and installed-package analyzer enforcement. See docs/design/primitive-layer.md for semantic boundaries.
 
@@ -24,6 +24,8 @@ Typed/generated evidence includes mutable/immutable models, constructor binding,
 Closed generic models and explicitly opted-in inheritance use substituted compile-time contracts, inherited key/override checks, constructor binding, bounded iterative dependency traversal, and independent object interop. The native verification script builds a fresh package and executes an independent packaged Native AOT consumer in addition to the project-based corpus.
 
 Continue with broader tagged CLR built-ins, union models, external formatter annotations, deterministic maps/key equivalence, and realistic object performance comparisons. Cancellation-aware outer streaming, coverage-guided fuzzing/shrinking, and IDE fixes remain unfinished. Preserve single-pass typed decoding and shared resource accounting as these features grow.
+
+Typed wire coverage now includes complete major-type integer values, arbitrary simple values, tag chains, BigInteger, and Half on NET8+ assets. Buffer-pair factory composition initializes child fields once, supports recursive graphs, and publishes complete graphs atomically. Concurrency, failed initialization, override precedence, and downlevel provider loading have focused tests. Standard integer/bignum encodings and simple values match an independent oracle; exhaustive Half round trips, malformed/truncated input, segmented reads, and shared limits are covered. Additional date/time, decimal, and UUID mappings still need explicit interoperable contracts.
 
 Use Foundation's buffer implementations rather than maintaining duplicate buffer/pool code. On .NET Standard, verify both compatibility assets; on modern runtimes, keep .NET 9 as the first ref-struct generic tier. Add true .NET Framework or engine consumers only if those become supported targets.
 

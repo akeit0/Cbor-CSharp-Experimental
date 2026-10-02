@@ -16,6 +16,7 @@ public class NestedModelBenchmarks
     [GlobalSetup]
     public void Setup()
     {
+        RuntimeAssetCheck.Verify();
         batch = new OrderBatch
         {
             BatchId = 1000,

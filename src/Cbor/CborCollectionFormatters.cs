@@ -6,20 +6,35 @@ using System.Runtime.InteropServices;
 namespace Cbor;
 
 /// <summary>Formats nullable value types, preserving CBOR null distinctly from undefined.</summary>
+/// <typeparam name="TWriteBuffer">Write buffer type.</typeparam>
+/// <typeparam name="TReadBuffer">Read buffer type.</typeparam>
 /// <typeparam name="T">Underlying value type.</typeparam>
-public sealed class CborNullableFormatter<T> : ICborFormatter<T?> where T : struct
+public sealed class CborNullableFormatter<TWriteBuffer, TReadBuffer, T> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, T?>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where T : struct
 {
     /// <inheritdoc />
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, T? value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    private ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter = null!;
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver)
+    {
+        formatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, T>();
+    }
+    /// <inheritdoc />
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, T? value)
     {
         if (value.HasValue)
         {
             // The nullable wrapper is the same wire item, so it does not charge a second item.
-            context.GetRequiredFormatter<T>().Serialize(ref buffer, ref context, value.Value);
+            context.SerializeSameItem(ref buffer, value.Value, formatter);
         }
         else
         {
@@ -28,25 +43,35 @@ public sealed class CborNullableFormatter<T> : ICborFormatter<T?> where T : stru
     }
 
     /// <inheritdoc />
-    public T? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public T? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
         => CborDeserializationContext.TryReadNull(ref buffer) ? null :
-            context.GetRequiredFormatter<T>().Deserialize(ref buffer, ref context);
+            context.DeserializeSameItem(ref buffer, formatter);
 }
 
 /// <summary>Formats CLR arrays as CBOR arrays. Byte arrays use the built-in byte-string formatter.</summary>
+/// <typeparam name="TWriteBuffer">Write buffer type.</typeparam>
+/// <typeparam name="TReadBuffer">Read buffer type.</typeparam>
 /// <typeparam name="T">Element type.</typeparam>
-public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
+public sealed class CborArrayFormatter<TWriteBuffer, TReadBuffer, T> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, T[]?>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
     /// <inheritdoc />
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, T[]? value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    private ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter = null!;
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver)
+    {
+        formatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, T>();
+    }
+    /// <inheritdoc />
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, T[]? value)
     {
         if (value is null)
         {
@@ -59,7 +84,6 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
         try
         {
             buffer.WriteArrayHeader((ulong)value.Length);
-            var formatter = value.Length == 0 ? null : context.GetRequiredFormatter<T>();
             foreach (T item in value)
             {
                 context.Serialize(ref buffer, item, formatter!);
@@ -72,11 +96,7 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
     }
 
     /// <inheritdoc />
-    public T[]? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public T[]? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         if (CborDeserializationContext.TryReadNull(ref buffer))
         {
@@ -93,8 +113,6 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
                 {
                     return Array.Empty<T>();
                 }
-
-                var formatter = context.GetRequiredFormatter<T>();
                 var result = new T[length.Value];
                 for (int i = 0; i < result.Length; i++)
                 {
@@ -108,13 +126,11 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
             {
                 return Array.Empty<T>();
             }
-
-            var elementFormatter = context.GetRequiredFormatter<T>();
             var items = new List<T>();
             while (!buffer.TryReadBreak())
             {
                 context.CheckCollectionLength(items.Count + 1);
-                items.Add(context.Deserialize(ref buffer, elementFormatter));
+                items.Add(context.Deserialize(ref buffer, formatter));
             }
 
             return items.ToArray();
@@ -127,15 +143,29 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
 }
 
 /// <summary>Formats lists as CBOR arrays, accepting definite and indefinite encodings.</summary>
+/// <typeparam name="TWriteBuffer">Write buffer type.</typeparam>
+/// <typeparam name="TReadBuffer">Read buffer type.</typeparam>
 /// <typeparam name="T">Element type.</typeparam>
-public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
+public sealed class CborListFormatter<TWriteBuffer, TReadBuffer, T> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, List<T>?>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
 {
     /// <inheritdoc />
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, List<T>? value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    private ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter = null!;
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver)
+    {
+        formatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, T>();
+    }
+    /// <inheritdoc />
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, List<T>? value)
     {
         if (value is null)
         {
@@ -148,7 +178,6 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
         try
         {
             buffer.WriteArrayHeader((ulong)value.Count);
-            var formatter = value.Count == 0 ? null : context.GetRequiredFormatter<T>();
             foreach (T item in value)
             {
                 context.Serialize(ref buffer, item, formatter!);
@@ -161,11 +190,7 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
     }
 
     /// <inheritdoc />
-    public List<T>? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public List<T>? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         if (CborDeserializationContext.TryReadNull(ref buffer))
         {
@@ -181,8 +206,6 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
             {
                 return result;
             }
-
-            var formatter = context.GetRequiredFormatter<T>();
             for (int i = 0; !length.HasValue || i < length.Value; i++)
             {
                 if (!length.HasValue && buffer.TryReadBreak())
@@ -205,10 +228,31 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
 
 /// <summary>Formats dictionaries as CBOR maps, rejecting duplicate CLR keys on read.</summary>
 /// <remarks>Writes preserve dictionary enumeration order; this is not a deterministic map-order profile.</remarks>
+/// <typeparam name="TWriteBuffer">Write buffer type.</typeparam>
+/// <typeparam name="TReadBuffer">Read buffer type.</typeparam>
 /// <typeparam name="TKey">Non-null key type. Its comparer must resist adversarial hash collisions.</typeparam>
 /// <typeparam name="TValue">Value type.</typeparam>
-public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dictionary<TKey, TValue>?> where TKey : notnull
+public sealed class CborDictionaryFormatter<TWriteBuffer, TReadBuffer, TKey, TValue> :
+    ICborFormatter<TWriteBuffer, TReadBuffer, Dictionary<TKey, TValue>?>
+    where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+    , allows ref struct
+#endif
+    where TKey : notnull
 {
+    /// <inheritdoc />
+    private ICborFormatter<TWriteBuffer, TReadBuffer, TKey> keyFormatter = null!;
+    private ICborFormatter<TWriteBuffer, TReadBuffer, TValue> valueFormatter = null!;
+    /// <inheritdoc />
+    public void Initialize(CborFormatterResolver resolver)
+    {
+        keyFormatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, TKey>();
+        valueFormatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, TValue>();
+    }
     private readonly IEqualityComparer<TKey> comparer;
 
     /// <summary>Creates a formatter with the supplied comparer or a process-keyed built-in comparer.</summary>
@@ -218,11 +262,7 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
     }
 
     /// <inheritdoc />
-    public void Serialize<TWriteBuffer>(ref TWriteBuffer buffer, ref CborSerializationContext context, Dictionary<TKey, TValue>? value)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, Dictionary<TKey, TValue>? value)
     {
         if (value is null)
         {
@@ -235,8 +275,6 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
         try
         {
             buffer.WriteMapHeader((ulong)value.Count);
-            var keyFormatter = value.Count == 0 ? null : context.GetRequiredFormatter<TKey>();
-            var valueFormatter = value.Count == 0 ? null : context.GetRequiredFormatter<TValue>();
             foreach (var pair in value)
             {
                 context.Serialize(ref buffer, pair.Key, keyFormatter!);
@@ -250,11 +288,7 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
     }
 
     /// <inheritdoc />
-    public Dictionary<TKey, TValue>? Deserialize<TReadBuffer>(ref TReadBuffer buffer, ref CborDeserializationContext context)
-        where TReadBuffer : struct, IReadBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
+    public Dictionary<TKey, TValue>? Deserialize(ref TReadBuffer buffer, ref CborDeserializationContext context)
     {
         if (CborDeserializationContext.TryReadNull(ref buffer))
         {
@@ -270,9 +304,6 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
             {
                 return result;
             }
-
-            var keyFormatter = context.GetRequiredFormatter<TKey>();
-            var valueFormatter = context.GetRequiredFormatter<TValue>();
             for (int i = 0; !length.HasValue || i < length.Value; i++)
             {
                 if (!length.HasValue && buffer.TryReadBreak())

@@ -9,8 +9,6 @@ namespace Cbor;
 public struct CborSerializationContext : IDisposable
 {
     private readonly CborSerializerOptions options;
-    private readonly bool builtinResolution;
-    private OperationFormatterCache formatters;
     private int depth;
     private long items;
     private readonly long start;
@@ -19,65 +17,73 @@ public struct CborSerializationContext : IDisposable
     public CborSerializationContext(CborSerializerOptions options, long bytesWritten = 0)
     {
         this.options = options ?? throw new ArgumentNullException(nameof(options));
-        builtinResolution = options.Resolver is CborBuiltinResolver;
         start = bytesWritten;
-        formatters = default;
         depth = 0;
         items = 0;
     }
 
-    /// <summary>Resolves each type lazily and shares its formatter throughout this operation.</summary>
-    /// <remarks>Resolver changes take effect on the next operation. Formatters must be stateless and thread-safe.</remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ICborFormatter<T> GetRequiredFormatter<T>() => builtinResolution
-        ? CborBuiltinResolver.Instance.GetRequiredFormatter<T>()
-        : formatters.GetRequiredFormatter<T>(options.Resolver);
+    /// <summary>Returns an ordinary-buffer adapter for an existing single-type provider.</summary>
+    public ICborFormatter<T> GetRequiredFormatter<T>() => options.Resolver.GetRequiredFormatter<T>();
 
-    /// <summary>Releases pooled formatter storage. Dispose once after completing or abandoning the operation.</summary>
-    public void Dispose() => formatters.Dispose();
+    /// <summary>Completes the operation. Contexts retain no pooled formatter storage.</summary>
+    public readonly void Dispose() { }
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
 
-    /// <summary>Serializes a nested or root value and charges its item and byte budget.</summary>
+    /// <summary>Serializes using the operation resolver and a borrowed buffer.</summary>
     public void Serialize<TWriteBuffer, T>(ref TWriteBuffer buffer, T value)
         where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+        , allows ref struct
+#endif
+        => Serialize(ref buffer, value, options.Resolver.GetFormatter<TWriteBuffer, CompatibleReadOnlySpanReadBuffer, T>());
+
+    /// <summary>Serializes a child through its initialized formatter, charging one item.</summary>
+    public void Serialize<TWriteBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<T> formatter)
+        where TWriteBuffer : struct, IWriteBuffer
+    {
+#if NET8_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(formatter);
+#else
+        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
+#endif
+        ChargeItem();
+        formatter.Serialize(ref buffer, ref this, value);
+        CheckEncodedLength(buffer.BytesWritten);
+    }
+
+    /// <summary>Serializes a child through its initialized formatter, charging one item.</summary>
+    public void Serialize<TWriteBuffer, TReadBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)
+        where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
+#endif
+        where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
 #endif
     {
         ChargeItem();
-
-        SerializeCore(ref buffer, value, GetRequiredFormatter<T>());
+        SerializeSameItem(ref buffer, value, formatter);
     }
 
-    /// <summary>Serializes with a formatter resolved from this operation's resolver, retaining shared budgets.</summary>
-    /// <remarks>Generated and collection formatters use this overload to reuse a resolved child formatter.</remarks>
-    public void Serialize<TWriteBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<T> formatter)
+    /// <summary>Delegates the current item without charging a second wire token.</summary>
+    public void SerializeSameItem<TWriteBuffer, TReadBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)
         where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+        , allows ref struct
+#endif
+        where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
 #endif
     {
 #if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(formatter);
 #else
-        if (formatter is null)
-        {
-            throw new ArgumentNullException(nameof(formatter));
-        }
+        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
 #endif
-
-        ChargeItem();
-        SerializeCore(ref buffer, value, formatter);
-    }
-
-    private void SerializeCore<TWriteBuffer, T>(ref TWriteBuffer buffer, T value, ICborFormatter<T> formatter)
-        where TWriteBuffer : struct, IWriteBuffer
-#if NET9_0_OR_GREATER
-            , allows ref struct
-#endif
-    {
         formatter.Serialize(ref buffer, ref this, value);
         CheckEncodedLength(buffer.BytesWritten);
     }
@@ -103,7 +109,7 @@ public struct CborSerializationContext : IDisposable
         buffer.WriteUInt64((ulong)key);
     }
 
-    private void ChargeItem()
+    internal void ChargeItem()
     {
         if (items >= options.ReaderOptions.MaxItems)
         {

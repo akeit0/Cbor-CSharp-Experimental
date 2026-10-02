@@ -9,8 +9,6 @@ namespace Cbor;
 public struct CborDeserializationContext : IDisposable
 {
     private readonly CborSerializerOptions options;
-    private readonly bool builtinResolution;
-    private OperationFormatterCache formatters;
     private int depth;
     private long items;
     private long declaredElements;
@@ -19,62 +17,79 @@ public struct CborDeserializationContext : IDisposable
     public CborDeserializationContext(CborSerializerOptions options, long messageLength)
     {
         this.options = options ?? throw new ArgumentNullException(nameof(options));
-        builtinResolution = options.Resolver is CborBuiltinResolver;
         if (messageLength < 0 || messageLength > options.ReaderOptions.MaxEncodedLength)
         {
             throw new InvalidDataException("The CBOR encoded byte budget was exceeded.");
         }
 
         declaredElements = messageLength;
-        formatters = default;
         depth = 0;
         items = 0;
     }
 
-    /// <summary>Resolves each type lazily and shares its formatter throughout this operation.</summary>
-    /// <remarks>Resolver changes take effect on the next operation. Formatters must be stateless and thread-safe.</remarks>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ICborFormatter<T> GetRequiredFormatter<T>() => builtinResolution
-        ? CborBuiltinResolver.Instance.GetRequiredFormatter<T>()
-        : formatters.GetRequiredFormatter<T>(options.Resolver);
+    /// <summary>Returns an ordinary-buffer adapter for an existing single-type provider.</summary>
+    public ICborFormatter<T> GetRequiredFormatter<T>() => options.Resolver.GetRequiredFormatter<T>();
 
-    /// <summary>Releases pooled formatter storage. Dispose once after completing or abandoning the operation.</summary>
-    public void Dispose() => formatters.Dispose();
+    /// <summary>Completes the operation. Contexts retain no pooled formatter storage.</summary>
+    public readonly void Dispose() { }
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
 
-    /// <summary>Reads a root or nested item with the same resolver and policy.</summary>
+    /// <summary>Reads using the operation resolver and a borrowed buffer.</summary>
     public T Deserialize<TReadBuffer, T>(ref TReadBuffer buffer)
         where TReadBuffer : struct, IReadBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+        , allows ref struct
+#endif
+        => Deserialize(ref buffer, options.Resolver.GetFormatter<CompatibleArrayPoolListWriteBuffer, TReadBuffer, T>());
+
+    /// <summary>Reads a child through its initialized formatter, charging and checking one item.</summary>
+    public T Deserialize<TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<T> formatter)
+        where TReadBuffer : struct, IReadBuffer
+    {
+#if NET8_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(formatter);
+#else
+        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
+#endif
+        ChargeItem();
+        CheckNextValue(ref buffer);
+        return formatter.Deserialize(ref buffer, ref this);
+    }
+
+    /// <summary>Reads a child through its initialized formatter, charging and checking one item.</summary>
+    public T Deserialize<TWriteBuffer, TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)
+        where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
+#endif
+        where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
 #endif
     {
         ChargeItem();
         CheckNextValue(ref buffer);
-        return GetRequiredFormatter<T>().Deserialize(ref buffer, ref this);
+        return DeserializeSameItem(ref buffer, formatter);
     }
 
-    /// <summary>Deserializes with a formatter resolved from this operation's resolver, retaining shared policies and budgets.</summary>
-    /// <remarks>Generated and collection formatters use this overload to reuse a resolved child formatter.</remarks>
-    public T Deserialize<TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<T> formatter)
+    /// <summary>Delegates the current item without charging or checking a second wire token.</summary>
+    public T DeserializeSameItem<TWriteBuffer, TReadBuffer, T>(ref TReadBuffer buffer, ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter)
+        where TWriteBuffer : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+        , allows ref struct
+#endif
         where TReadBuffer : struct, IReadBuffer
 #if NET9_0_OR_GREATER
-            , allows ref struct
+        , allows ref struct
 #endif
     {
 #if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(formatter);
 #else
-        if (formatter is null)
-        {
-            throw new ArgumentNullException(nameof(formatter));
-        }
+        if (formatter is null) { throw new ArgumentNullException(nameof(formatter)); }
 #endif
-
-        ChargeItem();
-        CheckNextValue(ref buffer);
         return formatter.Deserialize(ref buffer, ref this);
     }
 

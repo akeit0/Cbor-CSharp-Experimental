@@ -7,7 +7,51 @@ namespace Cbor.Tests.SourceGenerator;
 
 public sealed class GeneratorDiagnosticsTests
 {
+    [Theory]
+    [InlineData("private int Provider;")]
+    [InlineData("private class GeneratedFactory { }")]
+    public void GeneratedFactoryMembersCannotCollideWithUserDeclarations(string member)
+    {
+        var result = Run("using Cbor; [CborResolver(typeof(int))] public partial class Resolver { " + member + " }");
+        Assert.Null(result.Exception);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
+        Assert.Empty(result.GeneratedSources);
+    }
+
+    [Theory]
+    [InlineData("private int ObjectFormatter0;")]
+    [InlineData("private class ObjectFormatter0<W, R> { }")]
+    public void GeneratedFormatterMembersCannotCollideWithUserDeclarations(string member)
+    {
+        var result = Run("using Cbor; [CborObject] public class Model { } [CborResolver(typeof(Model))] public partial class Resolver { " + member + " }");
+        Assert.Null(result.Exception);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR001");
+        Assert.Empty(result.GeneratedSources);
+    }
     private static readonly ImmutableArray<MetadataReference> References = CreateReferences();
+
+    [Fact]
+    public void HalfRootsAreRejectedWhenTheReferencedRuntimeDoesNotSupportHalf()
+    {
+        var parse = new CSharpParseOptions(LanguageVersion.CSharp10);
+        var tree = CSharpSyntaxTree.ParseText("""
+            namespace Cbor {
+                [System.AttributeUsage(System.AttributeTargets.Class)]
+                public sealed class CborResolverAttribute : System.Attribute {
+                    public CborResolverAttribute(params System.Type[] roots) { }
+                }
+            }
+            [Cbor.CborResolver(typeof(System.Half))] public partial class Resolver { }
+            """, parse);
+        var references = References.Where(reference => reference.Display != typeof(CborObjectAttribute).Assembly.Location);
+        var compilation = CSharpCompilation.Create("LegacyRuntime", [tree], references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([new CborGenerator().AsSourceGenerator()], parseOptions: parse);
+        var result = driver.RunGenerators(compilation).GetRunResult().Results.Single();
+        Assert.Null(result.Exception);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Id == "CBOR002");
+        Assert.Empty(result.GeneratedSources);
+    }
 
     [Fact]
     public void GeneratedCodeCompilesForAMutableAndConstructorBoundModel()
@@ -66,6 +110,10 @@ public sealed class GeneratorDiagnosticsTests
     [Theory]
     [InlineData("byte[]")]
     [InlineData("System.Tuple<int>")]
+    [InlineData("Cbor.CborInteger")]
+    [InlineData("Cbor.CborSimpleValue")]
+    [InlineData("System.Numerics.BigInteger")]
+    [InlineData("System.Half")]
     public void UnsupportedDictionaryKeysAreDiagnosedBeforeResolverInitialization(string key)
     {
         var result = Run("using Cbor; [CborResolver(typeof(System.Collections.Generic.Dictionary<" + key + ", int>))] public partial class Resolver { }");
@@ -162,8 +210,10 @@ public sealed class GeneratorDiagnosticsTests
         Assert.Empty(result.Diagnostics);
         Assert.Null(result.Exception);
         string generated = Assert.Single(result.GeneratedSources).SourceText.ToString();
-        Assert.Contains("CborListFormatter<global::Node>", generated);
-        Assert.Contains("CborNullableFormatter<int>", generated);
+        Assert.Contains("CborListFormatter<W, R, global::Node>", generated);
+        Assert.Contains("CborNullableFormatter<W, R, int>", generated);
+        Assert.Contains("Initialize(global::Cbor.CborFormatterResolver resolver)", generated);
+        Assert.DoesNotContain("context.GetRequiredFormatter", generated);
         Assert.DoesNotContain("MakeGenericType", generated);
         Assert.DoesNotContain("System.Reflection", generated);
     }

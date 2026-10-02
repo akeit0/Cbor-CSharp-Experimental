@@ -1,5 +1,7 @@
 # Runtime path measurements — 2026-10-02
 
+These historical measurements precede operation caching and buffer-pair formatter fields. See [the current matched comparison](operation-resolution.md) for the retained typed-model architecture.
+
 `RuntimePathBenchmarks` measures eight repeated integer object members, 1,024-entry integral/string maps, 49,152 ASCII bytes, and 57,344 UTF-8 bytes alternating three- and four-byte code points. Segmented text uses 4,093-byte windows, including code-point seams. Setup and input construction are outside the measured methods. Object/map methods use the typed serializer and source-generated resolver; structural text checks also represent unknown-member traversal costs.
 
 | Workload | Before mean | Revised mean | Managed allocation per operation |

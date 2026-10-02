@@ -22,6 +22,7 @@ A CBOR serializer for .NET, informed by MessagePack-CSharp v4 and built on Seria
 | Cbor.Benchmarks.Net8 | Dictionary insertion with .NET 8 APIs and Compatible buffers | net8.0 |
 | Cbor.Benchmarks.NetStandard20 | Nested models and dictionary paths against the oldest runtime asset | net8.0 consumer, netstandard2.0 library |
 | Cbor.Sandbox | Runnable generated-object serialization example | net10.0 |
+| LegacyProjectProvider | Downlevel generated/paired/legacy providers loaded by modern and Native AOT consumers | netstandard2.0 |
 
 The .NET 9 boundary matters: generic code can accept Foundation ref-struct buffers there. The .NET Standard assets use its Compatible buffers. The .NET 8 asset also uses Compatible buffers and uses supported entry-reference dictionary insertion. Separate test projects force both .NET Standard assets so legacy coverage is retained.
 
@@ -74,11 +75,15 @@ public partial class AppResolver;
 
 Objects use stable integer-keyed maps. Every new public instance slot needs CborKey or CborIgnore; property overrides retain their inherited slot contracts. Generated readers reject repeated known keys and missing required members; unknown members are skipped with the same budgets and encoding policy. Missing optional members receive default(T). An accessible constructor can bind readonly members by name/type; CborConstructor selects one explicitly. Records, structs, closed generic and inherited models, nullable values, enums, arrays, lists, dictionaries, and recursive closed model graphs are supported. Model bases explicitly declare CborObject; hiding keyed members or reusing keys across a hierarchy produces diagnostics.
 
-Resolver roots are explicit for Native AOT: the generator closes the entire reachable formatter graph at compile time. There is no assembly scanning, runtime generic construction, or reflection fallback. Formatters resolve each used child type once per operation through context.GetRequiredFormatter\<T\>(); repeated nested objects share the same selection. Custom thread-safe ICborFormatter\<T\> implementations can be registered through CborFormatterRegistry and supplied in an ordered CborCompositeResolver. Unsupported generated contracts fail with CBOR001/CBOR002 instead of silently losing members.
+Resolver roots are explicit for Native AOT: the generator closes the entire reachable formatter graph at compile time. There is no assembly scanning, runtime generic construction, or reflection fallback. Buffer-pair formatters resolve child dependencies once in Initialize and reuse typed fields across repeated objects and operations. Completed graphs publish atomically; recursive dependencies reuse their in-progress instances. Custom thread-safe ICborFormatter\<T\> implementations can be registered through CborFormatterRegistry and supplied in an ordered CborCompositeResolver. Unsupported generated contracts fail with CBOR001/CBOR002 instead of silently losing members.
 
 Serialize overloads accept a value, an IBufferWriter\<byte\>, or a borrowed Foundation buffer. Deserialize accepts a span, segmented sequence, or bounded Foundation buffer and rejects trailing bytes. Null and undefined remain distinct. Definite and indefinite strings/collections are accepted by default; string chunks must individually contain valid UTF-8. Dictionary readers reject duplicate CLR keys and use process-keyed hashing for supported key types.
 
-Operation contexts own budgets and pooled formatter storage. Custom formatters borrow them by ref and must not dispose them. Direct context callers must dispose in finally; CBOR003 diagnoses ownership copies and boxing.
+Operation contexts carry per-call budgets; resolvers own initialized formatter graphs. Custom formatters borrow them by ref and must not dispose them. Direct context callers must dispose in finally; CBOR003 diagnoses ownership copies and boxing.
+
+CborInteger retains the full major-type integer range, and CborSimpleValue preserves simple values including distinct null/undefined. BigInteger uses standard integers or bignum tags 2/3. NET8+ assets map Half directly. CborTagged<T> preserves a tag and typed child, including nested tag chains; include closed wrappers in generated resolver roots. These mappings share item, depth, string, and encoding limits.
+
+CborFormatterFactory follows v4’s paired-buffer creation pattern: a stable Type overload plus generic ref-struct creation on NET9+. CborFormatterResolver initializes and caches complete dependency graphs. FromResolver adapts generated, built-in, and factory-backed providers; legacy registrations compose with CborCompositeResolver. Downlevel providers select compatible buffers for the whole operation before processing bytes.
 
 Read [the typed serializer design](docs/design/typed-serializer.md) for the exact contract, limits, and remaining work. Broad tagged CLR built-ins, unions/reference preservation, deterministic dictionary ordering, outer async streaming, and IDE fixes remain unfinished. These are serializer work, not reasons to redefine the project as a validator.
 

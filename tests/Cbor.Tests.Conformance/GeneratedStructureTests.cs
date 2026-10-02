@@ -108,7 +108,7 @@ public sealed class GeneratedStructureTests
                 writer.WriteTextString(count % 2 == 0 ? "水𐅑\0" : "CBOR ü");
                 break;
             case 5:
-                writer.WriteSimpleValue((CborSimpleValue)(count < 2 ? random.Next(24) : random.Next(32, 256)));
+                writer.WriteSimpleValue((System.Formats.Cbor.CborSimpleValue)(count < 2 ? random.Next(24) : random.Next(32, 256)));
                 break;
             case 6:
                 writer.WriteStartArray(random.Next(2) == 0 ? null : count);

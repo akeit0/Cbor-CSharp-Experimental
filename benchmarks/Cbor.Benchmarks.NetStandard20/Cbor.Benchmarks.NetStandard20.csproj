@@ -2,13 +2,21 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <DefineConstants>$(DefineConstants);CBOR_NETSTANDARD20</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" />
+    <!-- BDN's generated consumer otherwise reselects net8 through transitive project references. -->
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" ReferenceOutputAssembly="false" />
+    <Reference Include="Cbor">
+      <HintPath>../../src/Cbor/bin/$(Configuration)/netstandard2.0/Cbor.dll</HintPath>
+    </Reference>
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="SerializerFoundation" />
     <Compile Include="../Cbor.Benchmarks/Program.cs" Link="Program.cs" />
+    <Compile Include="../Cbor.Benchmarks/RuntimeAssetCheck.cs" Link="RuntimeAssetCheck.cs" />
     <Compile Include="../Cbor.Benchmarks/NestedModelBenchmarks.cs" Link="NestedModelBenchmarks.cs" />
     <Compile Include="../Cbor.Benchmarks/RuntimePathBenchmarks.cs" Link="RuntimePathBenchmarks.cs" />
+    <Compile Include="../Cbor.Benchmarks/WireValueBenchmarks.cs" Link="WireValueBenchmarks.cs" />
   </ItemGroup>
 </Project>

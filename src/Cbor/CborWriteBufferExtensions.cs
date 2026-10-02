@@ -248,7 +248,7 @@ public static class CborWriteBufferExtensions
     }
 
     /// <summary>Writes a definite byte string. Its payload is copied without requiring a contiguous destination.</summary>
-    public static void WriteByteString<TBuffer>(this ref TBuffer buffer, ReadOnlySpan<byte> value)
+    public static void WriteByteString<TBuffer>(this ref TBuffer buffer, scoped ReadOnlySpan<byte> value)
         where TBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
         , allows ref struct
@@ -259,7 +259,7 @@ public static class CborWriteBufferExtensions
     }
 
     /// <summary>Validates UTF-8 before writing a definite text string. Invalid text leaves the buffer unchanged.</summary>
-    public static void WriteTextStringUtf8<TBuffer>(this ref TBuffer buffer, ReadOnlySpan<byte> value)
+    public static void WriteTextStringUtf8<TBuffer>(this ref TBuffer buffer, scoped ReadOnlySpan<byte> value)
         where TBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
         , allows ref struct
@@ -331,7 +331,7 @@ public static class CborWriteBufferExtensions
         buffer.Advance(CborEncoding.ImmediateHeaderLength);
     }
 
-    private static void WritePayload<TBuffer>(ref TBuffer buffer, ReadOnlySpan<byte> payload)
+    private static void WritePayload<TBuffer>(ref TBuffer buffer, scoped ReadOnlySpan<byte> payload)
         where TBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
         , allows ref struct
