@@ -1,0 +1,11 @@
+# Focused optimization evidence
+
+This directory contains the final before/after data for [typed hot-path optimization](../hot-paths.md). Baseline: dd23fb8ca178779775be2c91e0f541e0674531ab. Final runtime/fixture source: 5c0a160172d4c9fadd0dce366363fe8d8b34fb1f. The new development fixture was copied unchanged into the baseline snapshot; baseline runtime sources were untouched.
+
+Each version ran 14 cases sequentially, two launches per case, four warmups and six measurements per launch, with 200 ms iteration targets. All 56 worker processes succeeded and verified assets/fixtures before timing. Development experiments and superseded candidates are excluded. Host/runtime/settings and exact reproduction command are in the parent report.
+
+* `before-*-report.csv` and `after-*-report.csv` are BenchmarkDotNet 0.15.8 summary exports, retaining job settings, means, 99.9% confidence interval half-widths, standard deviations and managed allocation summaries. Units are present in each field; 1 KB is 1,024 bytes. Ratio columns normalize to the Cbor category baseline within a run, not across versions or against MessagePack.
+* [measurements.csv](measurements.csv) retains both launches' raw workload samples before outlier removal, overhead samples, and retained overhead-adjusted results. There are 336 WorkloadActual rows in total: 14 cases × 2 launches × 6 measurements × 2 versions. `ns_per_operation` is derived from total nanoseconds divided by operations. WorkloadResult is the adjusted series used by BenchmarkDotNet; it can contain fewer rows after outlier removal. Case parameters distinguish the development counts and nested-model sizes.
+* [gc.csv](gc.csv) retains 56 worker GC records and exact managed bytes per operation. Initialization and retained formatter graphs are outside these warmed measurements; native memory is not measured.
+
+Full machine-local logs and Int32 disassembly are retained under ignored artifacts directories. The disassembly observation is scoped to the final .NET 10 Int32 bulk specialization, as described in the parent report. No local user paths are included in these exported data files. Large-model encoding's higher final mean remains an open concern; this record does not claim uniform gains or refresh the five-library comparison.

@@ -21,6 +21,8 @@
     <File Path="docs/benchmarks/clean-contract.md" />
     <File Path="docs/benchmarks/serializer-comparison.md" />
     <File Path="docs/benchmarks/serializer-comparison-data/README.md" />
+    <File Path="docs/benchmarks/hot-paths.md" />
+    <File Path="docs/benchmarks/hot-path-data/README.md" />
     <File Path="docs/benchmarks/wire-values.md" />
   </Folder>
   <Folder Name="/src/">
