@@ -65,4 +65,4 @@ Matched measurements against bce6094 show lower warmed nested-model times with u
 
 Registered-tag built-ins, full deterministic/key-equivalence profiles, unions/reference preservation, IDE fixes, API release baselines, older-engine hosts, integrations, and coverage-guided fuzzing remain unfinished. Hosted CI was not run locally. The roadmap lists remaining work toward comparable serializer quality.
 
-The private GitHub repository is [akeit0/Cbor-CSharp](https://github.com/akeit0/Cbor-CSharp). Hosted verification remains prepared only: the workflow has a manual dispatch trigger, repository Actions are disabled, and no hosted run has been requested.
+The experimental GitHub repository is [akeit0/Cbor-CSharp-Experimental](https://github.com/akeit0/Cbor-CSharp-Experimental). Hosted verification remains prepared only: the workflow has a manual dispatch trigger, repository Actions are disabled, and no hosted run has been requested.

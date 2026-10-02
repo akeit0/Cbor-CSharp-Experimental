@@ -1,4 +1,4 @@
-# Cbor-CSharp
+# Cbor-CSharp-Experimental
 
 A CBOR serializer for .NET, informed by MessagePack-CSharp v4 and built on SerializerFoundation 1.0.0. The goal is a complete serializer with comparable correctness, performance, tooling, and long-term maintainability.
 
