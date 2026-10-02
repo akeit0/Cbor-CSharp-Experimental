@@ -40,12 +40,13 @@ The object model now uses explicit integer map keys, required/unknown-member rul
 | Decision | Reason |
 | --- | --- |
 | XML Cbor.slnx with src/tests/benchmarks/sandbox folders | Matches the reference solution organization while exposing a smaller initial scope |
-| Stable .NET 10 SDK and explicit C# 14 | Foundation exposes C# 14 extension members; preview compiler features are unnecessary for this scaffold |
+| Stable .NET 10 SDK and explicit C# 14 for the core | Foundation exposes C# 14 extension members. The isolated v4 comparison uses upstream's .NET 11 preview compiler while measuring .NET 10 assets; analysis rules remain pinned to .NET 10 |
 | Runtime netstandard2.0/2.1 and net8.0/net9.0/net10.0 | Preserves Compatible buffers below .NET 9 while using supported .NET 8 dictionary entry references; .NET 11 is deferred until a concrete API or test requires it |
 | One net8/net9/net10 test project plus forced netstandard2.0/2.1 consumers | Checks all five assets with shared test source |
 | Separate conformance and robustness suites | Keeps byte interoperability and malformed-input behavior independently visible |
 | Actual native publish/run smoke | A successful managed run or IsAotCompatible declaration is insufficient evidence |
 | Central versions, lock files, warnings as errors, package validation | Makes dependency changes reviewable and all shipped assets build consistently |
+| Explicit runtime assembly name Cbor.CSharp; namespace and package ID Cbor | Allows PeterO.Cbor's CBOR assembly to load in the same process; a compile-time extern alias alone cannot resolve a runtime identity collision |
 | One runtime package bundles analyzer DLLs | Establishes consumer installation layout without publishing empty generator packages |
 | No compression, Unity, ASP.NET, SignalR packages yet | Add integrations once CBOR core and protocol contracts are usable |
 
@@ -66,3 +67,7 @@ Matched measurements against bce6094 show lower warmed nested-model times with u
 Registered-tag built-ins, full deterministic/key-equivalence profiles, unions/reference preservation, IDE fixes, API release baselines, older-engine hosts, integrations, and coverage-guided fuzzing remain unfinished. Hosted CI was not run locally. The roadmap lists remaining work toward comparable serializer quality.
 
 The experimental GitHub repository is [akeit0/Cbor-CSharp-Experimental](https://github.com/akeit0/Cbor-CSharp-Experimental). Hosted verification remains prepared only: the workflow has a manual dispatch trigger, repository Actions are disabled, and no hosted run has been requested.
+
+The [five-library comparison](../benchmarks/Cbor.Benchmarks.Comparison/README.md) uses the pinned, unmodified MessagePack v4 submodule and locked NuGet packages for CAPCOM.REDox.Cbor 1.0.0, PeterO.Cbor 4.5.5, and System.Formats.Cbor 10.0.12. One executable uses an extern alias for PeterO and loads the explicit Cbor.CSharp assembly. Local fixture checks assert loaded runtime assets, generated MessagePack model formatters, every decoded field, CBOR collection cross-reads, and independent model decoding. The assembly rename passed the complete 2,241-test verification and both Windows Native AOT paths.
+
+The [measured comparison](benchmarks/serializer-comparison.md) completed all 40 cases on .NET 10.0.12 with the upstream-required compiler. MessagePack v4 remains faster on these warmed workloads; Cbor is not at performance parity. REDox also leads on integer-array encoding and string-map decoding. Large-model Cbor encoding remains bimodal. Summary CSVs and both launches are versioned; runtime/buffer tiers, additional built-ins, cold paths, adverse input, and other hosts remain open coverage.

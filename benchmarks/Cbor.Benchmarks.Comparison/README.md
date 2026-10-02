@@ -37,3 +37,5 @@ CBOR collection payloads are cross-read by every CBOR provider. Every decoded el
 System.Formats.Cbor has no CLR object serializer; the adapters include reader/writer construction and typed materialization in measurement. PeterO's `FromObject`/`ToObject` conversion and DOM construction are timed, rather than timing a prebuilt DOM. REDox's DOM/converter work is inside its native serializer calls. Warm caches/pools are used according to each library's normal APIs.
 
 Model wire formats differ: Cbor and the System.Formats adapter use integer-keyed CBOR maps; MessagePack uses indexed arrays; REDox uses property-name CBOR maps; PeterO uses camel-cased property-name CBOR maps. Payload sizes are recorded separately. Defaults differ in safety checks, limits, and encoding choices; the fixtures are valid bounded inputs, and results do not establish equivalent error behavior or security guarantees. Ratios compare complete operations on equivalent CLR data, not identical wire work or full feature parity.
+
+See [the measured comparison](../../docs/benchmarks/serializer-comparison.md) and its versioned summary/launch data.

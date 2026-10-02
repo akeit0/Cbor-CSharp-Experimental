@@ -51,7 +51,7 @@ Finish builds/tests before starting benchmarks, then let the benchmark process f
 `eng/verify-native.ps1 -RuntimeIdentifier win-x64` (or `linux-x64` on Linux) runs the project-based native corpus, creates a fresh package, and publishes/executes an independent Native AOT package consumer. Both native paths treat trim/AOT warnings as errors.
 
 Read [the critical quality review](docs/quality-review.md) for remaining quality and performance gaps and required work.
-See [the five-library comparison](benchmarks/Cbor.Benchmarks.Comparison/README.md) for dependency pins, fixture verification, and measurement instructions.
+See [the five-library comparison](benchmarks/Cbor.Benchmarks.Comparison/README.md) for dependency pins, fixture verification, and measurement instructions, and [the measured results](docs/benchmarks/serializer-comparison.md) for time, allocation, payload, and launch evidence.
 See [factory-only contract measurements](docs/benchmarks/clean-contract.md) for the current nested-model and scalar comparison.
 See [operation resolution measurements](docs/benchmarks/operation-resolution.md) for nested workloads and the compatibility dictionary evaluation.
 See [runtime path measurements](docs/benchmarks/runtime-paths.md) for object, map, and UTF-8 workloads and reproduction instructions.
