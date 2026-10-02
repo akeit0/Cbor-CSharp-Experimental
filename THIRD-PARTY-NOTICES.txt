@@ -1,3 +1,6 @@
+Original code is dedicated under the Unlicense; see LICENSE.
+The third-party code identified below retains its original MIT license.
+
 OperationContextOwnershipAnalyzer.cs is adapted from SerializerFoundation
 https://github.com/Cysharp/SerializerFoundation
 

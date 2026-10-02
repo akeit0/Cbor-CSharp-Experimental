@@ -21,6 +21,7 @@ try {
         "analyzers/dotnet/cs/Cbor.SourceGenerator.dll",
         "analyzers/dotnet/cs/Cbor.SourceGenerator.CodeFixes.dll",
         "README.md",
+        "LICENSE",
         "THIRD-PARTY-NOTICES.txt"
     )
     foreach ($entry in $required) {
@@ -31,6 +32,10 @@ try {
     if (-not $nuspecEntry) { throw "Package has no nuspec." }
     $reader = [System.IO.StreamReader]::new($nuspecEntry.Open())
     try { [xml]$nuspec = $reader.ReadToEnd() } finally { $reader.Dispose() }
+    $license = $nuspec.SelectSingleNode("//*[local-name()='metadata']/*[local-name()='license']")
+    if (-not $license -or $license.type -ne "expression" -or $license.InnerText -ne "Unlicense AND MIT") {
+        throw "Package license must identify original Unlicense code and the bundled MIT analyzer adaptation."
+    }
     $dependencies = @($nuspec.SelectNodes("//*[local-name()='dependency']"))
     if (-not ($dependencies | Where-Object { $_.id -eq "SerializerFoundation" })) {
         throw "Foundation dependency is missing."

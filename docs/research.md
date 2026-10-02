@@ -49,7 +49,7 @@ The object model now uses explicit integer map keys, required/unknown-member rul
 | One runtime package bundles analyzer DLLs | Establishes consumer installation layout without publishing empty generator packages |
 | No compression, Unity, ASP.NET, SignalR packages yet | Add integrations once CBOR core and protocol contracts are usable |
 
-NuGet packaging is validated locally, including the absence of Roslyn/Workspaces runtime dependencies. Cbor is a provisional package name; no feed publication or ownership assertion is made. No release license, author identity, repository URL, or strong-name identity is invented. A future release must supply these deliberately.
+NuGet packaging is validated locally, including the absence of Roslyn/Workspaces runtime dependencies. Cbor is a provisional package name; no feed publication or ownership assertion is made. Original code uses the user-selected Unlicense; the adapted Foundation analyzer retains its MIT license and attribution. The package declares Unlicense AND MIT and includes both notices. Author metadata and a strong-name policy remain release decisions.
 
 ## Quality evidence and limits
 

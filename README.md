@@ -105,4 +105,8 @@ pwsh -File eng/verify-native.ps1 -RuntimeIdentifier win-x64
 
 On Linux pass linux-x64. The script isolates RID-specific restore locks under artifacts/aot-locks so native publishing does not rewrite committed dependency locks. CI uses the same script on Windows and Linux; local Windows verification is recorded in docs/research.md.
 
-Read [the research](docs/research.md) for reference revisions and architecture decisions, and [the roadmap](docs/roadmap.md) for measurable completion criteria. The experimental package ID Cbor is a local working choice; ownership, release license, signing identity, and publication metadata must be settled before a release.
+Read [the research](docs/research.md) for reference revisions and architecture decisions, and [the roadmap](docs/roadmap.md) for measurable completion criteria. The experimental package ID Cbor is a local working choice; ownership, signing identity, and publication metadata must be settled before a release.
+
+## License
+
+Original code uses the [Unlicense](LICENSE). The analyzer adapted from SerializerFoundation retains its MIT license and attribution in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). The NuGet package includes both notices and declares `Unlicense AND MIT` because it bundles the adapted analyzer.

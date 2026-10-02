@@ -39,4 +39,4 @@ Cbor.Tests.SourceGenerator now exercises the real generator. Add code-fix compil
 
 ## Release gate
 
-Before publishing, settle the package ID and repository/license/author metadata, choose a signing policy, commit an API compatibility baseline, and verify AOT consumers from packaged artifacts across platforms. Generated installed-package consumers already run on .NET 8/9/10. Current tests do not establish MessagePack v4 performance, complete semantic conformance, or release readiness.
+Before publishing, settle the package ID and repository/author metadata, choose a signing policy, commit an API compatibility baseline, and verify AOT consumers from packaged artifacts across platforms. Original code uses the Unlicense; the bundled analyzer adaptation retains MIT attribution and package license metadata records both. Generated installed-package consumers already run on .NET 8/9/10. Current tests do not establish MessagePack v4 performance, complete semantic conformance, or release readiness.
