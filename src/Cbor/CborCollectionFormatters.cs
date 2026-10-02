@@ -1,4 +1,5 @@
 using SerializerFoundation;
+using Cbor.Internal;
 #if NET8_0_OR_GREATER
 using System.Runtime.InteropServices;
 #endif
@@ -65,10 +66,12 @@ public sealed class CborArrayFormatter<TWriteBuffer, TReadBuffer, T> :
 {
     /// <inheritdoc />
     private ICborFormatter<TWriteBuffer, TReadBuffer, T> formatter = null!;
+    private IIntegerArrayWriter<TWriteBuffer, T>? integerWriter;
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver)
     {
         formatter = resolver.GetFormatter<TWriteBuffer, TReadBuffer, T>();
+        integerWriter = formatter as IIntegerArrayWriter<TWriteBuffer, T>;
     }
     /// <inheritdoc />
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, T[]? value)
@@ -84,6 +87,11 @@ public sealed class CborArrayFormatter<TWriteBuffer, TReadBuffer, T> :
         try
         {
             buffer.WriteArrayHeader((ulong)value.Length);
+            if (value.Length >= IntegerArrayWriter.MinimumBatchElements && integerWriter is not null)
+            {
+                integerWriter.WriteElements(ref buffer, ref context, value);
+                return;
+            }
             foreach (T item in value)
             {
                 context.Serialize(ref buffer, item, formatter!);
@@ -202,19 +210,21 @@ public sealed class CborListFormatter<TWriteBuffer, TReadBuffer, T> :
         {
             int? length = context.ReadArrayLength(ref buffer);
             var result = new List<T>(length ?? 0);
-            if (length == 0 || (!length.HasValue && buffer.TryReadBreak()))
+            if (length.HasValue)
             {
-                return result;
-            }
-            for (int i = 0; !length.HasValue || i < length.Value; i++)
-            {
-                if (!length.HasValue && buffer.TryReadBreak())
+                // The definite header has already bounded the full count and item budget.
+                for (int i = 0; i < length.Value; i++)
                 {
-                    break;
+                    result.Add(context.Deserialize(ref buffer, formatter));
                 }
-
-                context.CheckCollectionLength(i + 1);
-                result.Add(context.Deserialize(ref buffer, formatter));
+            }
+            else
+            {
+                while (!buffer.TryReadBreak())
+                {
+                    context.CheckCollectionLength(result.Count + 1);
+                    result.Add(context.Deserialize(ref buffer, formatter));
+                }
             }
 
             return result;

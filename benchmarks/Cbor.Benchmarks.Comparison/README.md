@@ -39,3 +39,16 @@ System.Formats.Cbor has no CLR object serializer; the adapters include reader/wr
 Model wire formats differ: Cbor and the System.Formats adapter use integer-keyed CBOR maps; MessagePack uses indexed arrays; REDox uses property-name CBOR maps; PeterO uses camel-cased property-name CBOR maps. Payload sizes are recorded separately. Defaults differ in safety checks, limits, and encoding choices; the fixtures are valid bounded inputs, and results do not establish equivalent error behavior or security guarantees. Ratios compare complete operations on equivalent CLR data, not identical wire work or full feature parity.
 
 See [the measured comparison](../../docs/benchmarks/serializer-comparison.md) and its versioned summary/launch data.
+
+## Development loop
+
+Use short, focused runs while changing the implementation. Three iterations give wide confidence intervals: use them to reject clear regressions or identify promising changes, then confirm a verified candidate with more samples. Finish builds and targeted tests before each run; do not rebuild while workers are running.
+
+```powershell
+# From this comparison directory, after building:
+dotnet run -c Release --no-build --no-restore -- --filter '*Comparison.Cbor*' --job short --warmupCount 3 --iterationCount 3 --launchCount 1 --iterationTime 150 --artifacts ../../artifacts/benchmarks/dev-cbor
+# Single-element, eight-element, and 1,024-element integer-array controls:
+dotnet run -c Release --no-build --no-restore -- --filter '*IntegerArrayDevelopment*' --job short --warmupCount 3 --iterationCount 3 --launchCount 1 --iterationTime 150 --artifacts ../../artifacts/benchmarks/dev-arrays
+```
+
+These run eight and six cases, respectively; local development runs took approximately 30 seconds each. The development fixture's namespace is separate so the existing '*Comparison*' filter still selects the original 40 five-library cases. Reserve broad correctness verification and stronger timing confirmation for a candidate that passes the focused loop. Keep baseline/after artifact directories separate.

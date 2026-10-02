@@ -207,6 +207,7 @@ public struct CborDeserializationContext : IDisposable
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private readonly void CheckNextValue<TReadBuffer>(ref TReadBuffer buffer)
         where TReadBuffer : struct, IReadBuffer
 #if NET9_0_OR_GREATER
@@ -214,9 +215,24 @@ public struct CborDeserializationContext : IDisposable
 #endif
     {
         var span = buffer.GetUnreadSpan();
-        if (!span.IsEmpty && (span[0] & CborEncoding.AdditionalInformationMask) < CborEncoding.DirectArgumentLimit)
+        if (!span.IsEmpty)
         {
-            return; // Every immediate argument is structurally valid and preferred.
+            byte initial = span[0];
+            int additional = initial & CborEncoding.AdditionalInformationMask;
+            if (additional < CborEncoding.DirectArgumentLimit)
+            {
+                return; // Every immediate argument is structurally valid and preferred.
+            }
+
+            // Complete extended arguments are valid for every major type, except the
+            // extended simple-value token, whose payload has an additional lower bound.
+            // Preferred-width checks, seams, reserved codes and indefinite forms stay cold.
+            if (additional <= CborEncoding.UInt64Argument && initial != CborEncoding.ExtendedSimple &&
+                // Additional information 24..27 selects 1, 2, 4 or 8 payload bytes.
+                span.Length > (1 << (additional - CborEncoding.UInt8Argument)) && !options.ReaderOptions.RequirePreferredEncoding)
+            {
+                return;
+            }
         }
 
         CheckNextValueCold(ref buffer);
