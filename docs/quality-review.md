@@ -1,0 +1,11 @@
+# Remaining quality and performance gaps — 2026-10-02
+
+| Priority | Open issue | Required evidence or work |
+| --- | --- | --- |
+| P2 | Nested/repeated model instances resolve member formatters again per object call. | Benchmark realistic nested-model workloads, then evaluate resolution shared across the operation that preserves custom overrides and avoids initialization cycles or per-call allocation regressions. |
+| P2 | Compatibility dictionary readers perform `ContainsKey` and `Add`, hashing valid keys twice after the first insertion. | Evaluate a compatible insertion strategy that preserves comparer semantics, duplicate rejection before value decoding, and failure behavior. Measure compatibility assets separately. |
+| P2 | Chunked strings validate each chunk and then decode the aggregate, with pooled growth and a final copy for byte arrays. Malformed and highly fragmented text need broader timing evidence. | Evaluate aggregation and allocation strategies that preserve rejection of malformed chunk boundaries; measure malformed input and adverse segmentation alongside normal text. |
+| P2 | Generator coverage lacks measurements of cached incremental steps after unrelated edits and cancellation on large graphs. | Track incremental steps and compiler time for large/multiple resolvers; retain a compiler-host compatibility matrix. |
+| P2 | Generic/inherited models, semantic-tag CLR mappings, unions/reference handling, deterministic dictionary ordering and key-equivalence profiles, async outer streaming, and IDE fixes remain incomplete. | Specify each wire contract and add independent interoperability and native/package evidence before claiming complete serializer maturity. |
+| P2 | Benchmarks lack equivalent realistic typed models against MessagePack v4 and coverage of all runtime/buffer tiers. | Use matched contracts, workloads, policy settings, payload sizes, allocations, and disassembly. Run on compatibility and modern runtimes, contiguous and segmented buffers. |
+| P2 | Coverage-guided fuzzing and shrinking are missing. Hosted Linux CI remains unverified; packaged Native AOT consumers across platforms remain a release gate. | Add instrumented fuzz targets and retain a minimized corpus. Run platform CI and verify packaged Native AOT consumers across supported platforms. |

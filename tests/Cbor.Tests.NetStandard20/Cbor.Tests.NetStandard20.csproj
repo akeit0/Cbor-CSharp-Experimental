@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants);CBOR_NETSTANDARD20</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <!-- Execute the oldest asset rather than letting net8 select netstandard2.1. -->
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" />
+    <Compile Include="../Shared/IntegerHarness.cs" Link="IntegerHarness.cs" />
+    <Compile Include="../Cbor.Tests/TypedSerializationTests.cs" Link="TypedSerializationTests.cs" />
+    <Compile Include="../Cbor.Tests/RuntimeImprovementTests.cs" Link="RuntimeImprovementTests.cs" />
+    <Compile Include="../Cbor.Tests/KeyComparerTests.cs" Link="KeyComparerTests.cs" />
+    <Compile Include="../Cbor.Tests/BufferTierTests.cs" Link="BufferTierTests.cs" />
+    <Compile Include="../Cbor.Tests/PrimitiveTests.cs" Link="PrimitiveTests.cs" />
+    <Compile Include="../Cbor.Tests/StructuralValidationTests.cs" Link="StructuralValidationTests.cs" />
+    <Compile Include="../Cbor.Tests/WriterReaderTests.cs" Link="WriterReaderTests.cs" />
+  </ItemGroup>
+</Project>

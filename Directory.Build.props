@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <IsPackable>false</IsPackable>
+    <Version>0.1.0-alpha.1</Version>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- RID-specific restore graphs belong to native build artifacts, not the committed JIT dependency locks. -->
+    <NuGetLockFilePath Condition="'$(CborAotRestore)' == 'true'">$(MSBuildThisFileDirectory)artifacts/aot-locks/$(MSBuildProjectName)/packages.lock.json</NuGetLockFilePath>
+    <RestoreLockedMode Condition="'$(CborAotRestore)' == 'true'">false</RestoreLockedMode>
+  </PropertyGroup>
+</Project>

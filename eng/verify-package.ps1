@@ -1,0 +1,48 @@
+param([string]$PackagePath)
+
+$ErrorActionPreference = "Stop"
+if (-not $PackagePath) {
+    $taskRoot = Split-Path $PSScriptRoot -Parent
+    $packages = @(Get-ChildItem -LiteralPath "$taskRoot/artifacts/packages" -Filter "Cbor.*.nupkg")
+    if ($packages.Count -ne 1) { throw "Expected one Cbor package; supply -PackagePath if multiple versions exist." }
+    $PackagePath = $packages[0].FullName
+}
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $PackagePath))
+try {
+    $paths = @($archive.Entries | ForEach-Object { $_.FullName })
+    $required = @(
+        "lib/netstandard2.0/Cbor.dll",
+        "lib/netstandard2.1/Cbor.dll",
+        "lib/net9.0/Cbor.dll",
+        "lib/net10.0/Cbor.dll",
+        "analyzers/dotnet/cs/Cbor.SourceGenerator.dll",
+        "analyzers/dotnet/cs/Cbor.SourceGenerator.CodeFixes.dll",
+        "README.md"
+    )
+    foreach ($entry in $required) {
+        if ($paths -notcontains $entry) { throw "Package is missing $entry." }
+    }
+
+    $nuspecEntry = $archive.Entries | Where-Object { $_.FullName -like "*.nuspec" } | Select-Object -First 1
+    if (-not $nuspecEntry) { throw "Package has no nuspec." }
+    $reader = [System.IO.StreamReader]::new($nuspecEntry.Open())
+    try { [xml]$nuspec = $reader.ReadToEnd() } finally { $reader.Dispose() }
+    $dependencies = @($nuspec.SelectNodes("//*[local-name()='dependency']"))
+    if (-not ($dependencies | Where-Object { $_.id -eq "SerializerFoundation" })) {
+        throw "Foundation dependency is missing."
+    }
+    if ($dependencies | Where-Object { $_.id -like "Microsoft.CodeAnalysis*" }) {
+        throw "Roslyn dependencies leaked into the runtime package."
+    }
+    $foundation = $dependencies | Where-Object { $_.id -eq "SerializerFoundation" }
+    foreach ($dependency in $foundation) {
+        if ($dependency.exclude -match "Analyzers") { throw "Foundation analyzers are excluded for consumers." }
+    }
+
+    Write-Host "CBOR package layout and dependency checks passed."
+}
+finally {
+    $archive.Dispose()
+}

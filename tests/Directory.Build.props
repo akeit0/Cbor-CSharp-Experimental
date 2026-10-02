@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="../Directory.Build.props" />
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Shared/RfcVectors.cs" Link="RfcVectors.cs" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Shared/Fixtures/*.txt" LogicalName="Cbor.Fixtures.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsTestProject)' == 'true' and '$(MSBuildProjectName)' != 'Cbor.Tests.NativeAot'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

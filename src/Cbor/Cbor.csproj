@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net9.0;net10.0</TargetFrameworks>
+    <IsPackable>true</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>Cbor</PackageId>
+    <Description>High-performance CBOR serialization for .NET, built on SerializerFoundation with typed formatters, source generation, and Native AOT support. Experimental development release.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>cbor;serialization;serializer</PackageTags>
+    <IsAotCompatible Condition="'$(TargetFramework)' == 'net9.0' or '$(TargetFramework)' == 'net10.0'">true</IsAotCompatible>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SerializerFoundation" PrivateAssets="none" />
+    <ProjectReference Include="../Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Cbor.SourceGenerator.CodeFixes/Cbor.SourceGenerator.CodeFixes.csproj" ReferenceOutputAssembly="false" />
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../Cbor.SourceGenerator/bin/$(Configuration)/netstandard2.0/Cbor.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="../Cbor.SourceGenerator.CodeFixes/bin/$(Configuration)/netstandard2.0/Cbor.SourceGenerator.CodeFixes.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Memory" />
+  </ItemGroup>
+</Project>

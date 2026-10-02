@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="System.Formats.Cbor" />
+  </ItemGroup>
+</Project>

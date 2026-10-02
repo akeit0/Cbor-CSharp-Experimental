@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <!-- Test the freshly packed artifact, whose content changes before a release version is assigned. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <DefineConstants Condition="'$(CborVerifyOwnershipViolation)' == 'true'">$(DefineConstants);VERIFY_OWNERSHIP_VIOLATION</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cbor" />
+  </ItemGroup>
+  <Target Name="VerifyInstalledAnalyzers" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <FoundationAnalyzer Include="@(Analyzer)" Condition="'%(Filename)' == 'SerializerFoundation.Analyzers'" />
+      <CborGenerator Include="@(Analyzer)" Condition="'%(Filename)' == 'Cbor.SourceGenerator'" />
+      <CborCodeFixes Include="@(Analyzer)" Condition="'%(Filename)' == 'Cbor.SourceGenerator.CodeFixes'" />
+    </ItemGroup>
+    <Error Condition="'@(FoundationAnalyzer)' == ''" Text="The installed package lost its Foundation analyzers." />
+    <Error Condition="'@(CborGenerator)' == '' or '@(CborCodeFixes)' == ''" Text="The installed package lost its CBOR analyzer assemblies." />
+  </Target>
+</Project>
