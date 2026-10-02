@@ -6,6 +6,13 @@
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
     <DefineConstants Condition="'$(CborVerifyOwnershipViolation)' == 'true'">$(DefineConstants);VERIFY_OWNERSHIP_VIOLATION</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CborVerifyNativeConsumer)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <IlcTreatWarningsAsErrors>true</IlcTreatWarningsAsErrors>
+    <ILLinkTreatWarningsAsErrors>true</ILLinkTreatWarningsAsErrors>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Cbor" />
   </ItemGroup>

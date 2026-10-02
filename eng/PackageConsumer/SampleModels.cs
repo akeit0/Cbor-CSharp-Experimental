@@ -32,5 +32,60 @@ public sealed class SampleValue
     public string? Label { get; }
 }
 
-[CborResolver(typeof(SampleEnvelope), typeof(Dictionary<long, string>))]
+[CborObject]
+public sealed class SampleBox<T>
+{
+    [CborConstructor]
+    public SampleBox(T value) => Value = value;
+
+    [CborKey(0, Required = true)]
+    public T Value { get; }
+}
+
+[CborObject]
+public abstract class SampleBase<T>
+{
+    protected SampleBase(T id) => Id = id;
+
+    [CborKey(0, Required = true)]
+    public T Id { get; }
+
+    [CborKey(1)]
+    public virtual string? Label { get; set; }
+}
+
+[CborObject]
+public sealed class SampleDerived : SampleBase<long>
+{
+    private string? label;
+
+    [CborConstructor]
+    public SampleDerived(long id, string? label) : base(id) => Label = label;
+
+    // Inherit key 1 from the overridden virtual slot.
+    public override string? Label
+    {
+        get => label;
+        set { Assignments++; label = value?.ToUpperInvariant(); }
+    }
+
+    [CborIgnore]
+    public int Assignments { get; private set; }
+
+    [CborKey(2)]
+    public int Quantity { get; set; }
+}
+
+[CborObject]
+public sealed class SampleTree<T>
+{
+    [CborKey(0)]
+    public T? Value { get; set; }
+
+    [CborKey(1)]
+    public List<SampleTree<T>>? Children { get; set; }
+}
+
+[CborResolver(typeof(SampleEnvelope), typeof(Dictionary<long, string>), typeof(SampleBox<int>),
+    typeof(SampleBox<string>), typeof(SampleBox<SampleDerived>), typeof(SampleTree<int>))]
 public partial class SampleResolver;

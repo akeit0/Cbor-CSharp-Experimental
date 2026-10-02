@@ -7,5 +7,6 @@
     <ProjectReference Include="../../src/Cbor/Cbor.csproj" />
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <Compile Include="../Shared/IntegerHarness.cs" Link="IntegerHarness.cs" />
+    <Compile Include="../../eng/PackageConsumer/SampleModels.cs" Link="SampleModels.cs" />
   </ItemGroup>
 </Project>

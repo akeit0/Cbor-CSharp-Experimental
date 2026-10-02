@@ -21,7 +21,9 @@ Current evidence includes RFC Appendix A/F fixtures, exhaustive half decoding, e
 
 Typed/generated evidence includes mutable/immutable models, constructor binding, records, structs, enums, nullable values, arrays/lists/dictionaries, recursive graphs, required/duplicate/unknown keys, shared budgets, chunked strings, process-keyed hashing, and independent nested-object interop. The dedicated generator suite exercises unsupported contracts and input edits. Native and installed-package consumers compile and execute generated contracts.
 
-Continue with broader tagged CLR built-ins, generic/inherited/union models, external formatter annotations, deterministic maps/key equivalence, and realistic object performance comparisons. Cancellation-aware outer streaming, coverage-guided fuzzing/shrinking, and IDE fixes remain unfinished. Preserve single-pass typed decoding and shared resource accounting as these features grow.
+Closed generic models and explicitly opted-in inheritance use substituted compile-time contracts, inherited key/override checks, constructor binding, bounded iterative dependency traversal, and independent object interop. The native verification script builds a fresh package and executes an independent packaged Native AOT consumer in addition to the project-based corpus.
+
+Continue with broader tagged CLR built-ins, union models, external formatter annotations, deterministic maps/key equivalence, and realistic object performance comparisons. Cancellation-aware outer streaming, coverage-guided fuzzing/shrinking, and IDE fixes remain unfinished. Preserve single-pass typed decoding and shared resource accounting as these features grow.
 
 Use Foundation's buffer implementations rather than maintaining duplicate buffer/pool code. On .NET Standard, verify both compatibility assets; on modern runtimes, keep .NET 9 as the first ref-struct generic tier. Add true .NET Framework or engine consumers only if those become supported targets.
 

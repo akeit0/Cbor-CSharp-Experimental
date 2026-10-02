@@ -11,6 +11,8 @@
     <Compile Include="../Shared/IntegerHarness.cs" Link="IntegerHarness.cs" />
     <Compile Include="../Cbor.Tests/TypedSerializationTests.cs" Link="TypedSerializationTests.cs" />
     <Compile Include="../Cbor.Tests/RuntimeImprovementTests.cs" Link="RuntimeImprovementTests.cs" />
+    <Compile Include="../Cbor.Tests/GenericInheritanceTests.cs" Link="GenericInheritanceTests.cs" />
+    <Compile Include="../../eng/PackageConsumer/SampleModels.cs" Link="SampleModels.cs" />
     <Compile Include="../Cbor.Tests/KeyComparerTests.cs" Link="KeyComparerTests.cs" />
     <Compile Include="../Cbor.Tests/BufferTierTests.cs" Link="BufferTierTests.cs" />
     <Compile Include="../Cbor.Tests/PrimitiveTests.cs" Link="PrimitiveTests.cs" />

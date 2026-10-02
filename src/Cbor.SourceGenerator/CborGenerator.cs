@@ -12,6 +12,9 @@ namespace Cbor.SourceGenerator;
 [Generator(LanguageNames.CSharp)]
 public sealed class CborGenerator : IIncrementalGenerator
 {
+    private const int MaxGraphTypes = 4096;
+    private const int MaxTypeNesting = 64;
+    private const int MaxTypeComponents = 4096;
     private static readonly DiagnosticDescriptor InvalidContract = new(
         "CBOR001", "Invalid CBOR contract", "{0}", "Cbor", DiagnosticSeverity.Error, true);
     private static readonly DiagnosticDescriptor UnsupportedType = new(
@@ -52,19 +55,47 @@ public sealed class CborGenerator : IIncrementalGenerator
 
         var roots = arguments[0].Values;
         var graph = new List<Node>();
+        var pending = new Queue<ITypeSymbol>();
         var visited = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
         bool valid = true;
         foreach (var root in roots)
         {
             if (root.Value is ITypeSymbol type)
             {
-                valid &= Visit(output, type, graph, visited, compilation, resolver);
+                pending.Enqueue(type);
             }
             else
             {
                 Report(output, resolver, "CborResolver root entries must be non-null closed types.");
                 valid = false;
             }
+        }
+
+        while (pending.Count != 0)
+        {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            var type = pending.Dequeue();
+            // Bound constructed types before symbol hashing or display formatting can
+            // recursively traverse a large substituted argument expression.
+            if (!IsClosedBoundedType(type, output))
+            {
+                valid = false;
+                continue;
+            }
+
+            if (visited.Contains(type))
+            {
+                continue;
+            }
+
+            if (visited.Count == MaxGraphTypes)
+            {
+                Report(output, resolver, "The CBOR resolver graph exceeds 4096 distinct types. Split finite graphs into smaller resolvers; recursively expanding generic dependencies cannot be generated.");
+                valid = false;
+                break;
+            }
+
+            valid &= Visit(output, type, graph, visited, pending, compilation, resolver);
         }
 
         if (!valid)
@@ -118,7 +149,7 @@ public sealed class CborGenerator : IIncrementalGenerator
         output.AddSource(hint, SourceText.From(code.ToString(), Encoding.UTF8));
     }
 
-    private static bool Visit(SourceProductionContext output, ITypeSymbol type, List<Node> graph, HashSet<ITypeSymbol> visited,
+    private static bool Visit(SourceProductionContext output, ITypeSymbol type, List<Node> graph, HashSet<ITypeSymbol> visited, Queue<ITypeSymbol> pending,
         Compilation compilation, INamedTypeSymbol resolver)
     {
         if (!visited.Add(type))
@@ -134,7 +165,8 @@ public sealed class CborGenerator : IIncrementalGenerator
         if (type is IArrayTypeSymbol array && array.Rank == 1)
         {
             graph.Add(new Node(type, "global::Cbor.CborArrayFormatter<" + Name(array.ElementType) + ">"));
-            return Visit(output, array.ElementType, graph, visited, compilation, resolver);
+            pending.Enqueue(array.ElementType);
+            return true;
         }
 
         if (type is INamedTypeSymbol named)
@@ -149,7 +181,8 @@ public sealed class CborGenerator : IIncrementalGenerator
             if (named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
             {
                 graph.Add(new Node(type, "global::Cbor.CborNullableFormatter<" + Name(named.TypeArguments[0]) + ">"));
-                return Visit(output, named.TypeArguments[0], graph, visited, compilation, resolver);
+                pending.Enqueue(named.TypeArguments[0]);
+                return true;
             }
 
             if (definition is "System.Collections.Generic.List<T>" or "System.Collections.Generic.Dictionary<TKey, TValue>")
@@ -164,13 +197,12 @@ public sealed class CborGenerator : IIncrementalGenerator
                 string formatter = definition.StartsWith("System.Collections.Generic.List", StringComparison.Ordinal)
                     ? "global::Cbor.CborListFormatter<" : "global::Cbor.CborDictionaryFormatter<";
                 graph.Add(new Node(type, formatter + string.Join(", ", named.TypeArguments.Select(Name)) + ">"));
-                bool valid = true;
                 foreach (var argument in named.TypeArguments)
                 {
-                    valid &= Visit(output, argument, graph, visited, compilation, resolver);
+                    pending.Enqueue(argument);
                 }
 
-                return valid;
+                return true;
             }
 
             if (HasAttribute(named, "Cbor.CborObjectAttribute"))
@@ -182,13 +214,12 @@ public sealed class CborGenerator : IIncrementalGenerator
                 }
 
                 graph.Add(node);
-                bool valid = true;
                 foreach (var member in node.Members)
                 {
-                    valid &= Visit(output, member.Type, graph, visited, compilation, resolver);
+                    pending.Enqueue(member.Type);
                 }
 
-                return valid;
+                return true;
             }
         }
 
@@ -198,30 +229,85 @@ public sealed class CborGenerator : IIncrementalGenerator
         return false;
     }
 
+    private static bool IsClosedBoundedType(ITypeSymbol type, SourceProductionContext output)
+    {
+        if (IsBuiltin(type) || type is INamedTypeSymbol { Arity: 0, ContainingType: null, TypeKind: not TypeKind.Error })
+        {
+            return true;
+        }
+
+        var pending = new Stack<(ITypeSymbol Type, int Depth)>();
+        pending.Push((type, 0));
+        int components = 0;
+        while (pending.Count != 0)
+        {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            var item = pending.Pop();
+            if (++components > MaxTypeComponents)
+            {
+                Report(output, type, "CBOR type construction exceeds 4096 components. Recursively expanding generic dependencies cannot be generated.");
+                return false;
+            }
+
+            if (item.Depth > MaxTypeNesting)
+            {
+                Report(output, type, "CBOR type construction exceeds 64 nesting levels. Recursively expanding generic dependencies cannot be generated.");
+                return false;
+            }
+
+            if (item.Type.TypeKind is TypeKind.TypeParameter or TypeKind.Error ||
+                item.Type is INamedTypeSymbol { IsUnboundGenericType: true })
+            {
+                Report(output, type, "A generated CBOR graph requires closed types; open generic definitions and unresolved type parameters are unsupported.");
+                return false;
+            }
+
+            if (item.Type is IArrayTypeSymbol array)
+            {
+                pending.Push((array.ElementType, item.Depth + 1));
+            }
+            else if (item.Type is INamedTypeSymbol named)
+            {
+                foreach (var argument in named.TypeArguments)
+                {
+                    pending.Push((argument, item.Depth + 1));
+                }
+
+                if (named.ContainingType is not null)
+                {
+                    pending.Push((named.ContainingType, item.Depth + 1));
+                }
+            }
+        }
+
+        return true;
+    }
+
     private static Node? ReadObject(SourceProductionContext output, INamedTypeSymbol type, Compilation compilation, INamedTypeSymbol resolver)
     {
-        if (type.IsAbstract || type.Arity != 0 || type.IsRefLikeType ||
+        if (type.IsAbstract || type.IsRefLikeType ||
             type.TypeKind is not (TypeKind.Class or TypeKind.Struct) ||
-            (type.BaseType is not null && type.BaseType.SpecialType is not (SpecialType.System_Object or SpecialType.System_ValueType)) ||
             !Accessible(type, compilation, resolver) ||
             type.DeclaringSyntaxReferences.Any(static reference => reference.GetSyntax() is TypeDeclarationSyntax declaration &&
                 declaration.Modifiers.Any(static modifier => modifier.ValueText == "file")))
         {
-            Report(output, type, "Generated CBOR objects must be accessible, concrete, nongeneric classes or structs without model inheritance.");
+            Report(output, type, "Generated CBOR objects must be accessible, concrete, closed classes or structs that are not ref-like or file-local.");
             return null;
         }
 
         var members = new List<Member>();
         var keys = new HashSet<int>();
-        bool valid = true;
-        foreach (var symbol in type.GetMembers())
+        var slots = ReadContractSlots(output, type, out bool valid);
+        foreach (var slot in slots)
         {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            var symbol = slot.Symbol;
             if (symbol.IsImplicitlyDeclared || symbol is not (IPropertySymbol or IFieldSymbol))
             {
                 continue;
             }
 
-            var keyAttribute = Attribute(symbol, "Cbor.CborKeyAttribute");
+            var keyAttribute = slot.Key;
             if (symbol.IsStatic)
             {
                 if (keyAttribute is not null)
@@ -233,7 +319,7 @@ public sealed class CborGenerator : IIncrementalGenerator
                 continue;
             }
 
-            bool ignored = HasAttribute(symbol, "Cbor.CborIgnoreAttribute");
+            bool ignored = slot.Ignored;
             if (ignored && keyAttribute is not null)
             {
                 Report(output, symbol, "A member cannot have both CborKey and CborIgnore.");
@@ -345,7 +431,7 @@ public sealed class CborGenerator : IIncrementalGenerator
 
         if (!HasAttribute(selected, "System.Diagnostics.CodeAnalysis.SetsRequiredMembersAttribute"))
         {
-            foreach (var symbol in type.GetMembers().Where(IsClrRequired))
+            foreach (var symbol in slots.Select(static slot => slot.Symbol).Where(IsClrRequired))
             {
                 var member = members.FirstOrDefault(member => member.Name == symbol.Name);
                 bool bound = selected.Parameters.Any(parameter =>
@@ -361,6 +447,123 @@ public sealed class CborGenerator : IIncrementalGenerator
         members.Sort(static (left, right) => left.Key.CompareTo(right.Key));
         return new Node(type, null, members.ToImmutableArray(), selected);
     }
+
+    private static List<ContractSlot> ReadContractSlots(SourceProductionContext output, INamedTypeSymbol type, out bool valid)
+    {
+        valid = true;
+        var hierarchy = new Stack<INamedTypeSymbol>();
+        var ancestors = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        for (var current = type; current is not null && current.SpecialType is not (SpecialType.System_Object or SpecialType.System_ValueType); current = current.BaseType)
+        {
+            output.CancellationToken.ThrowIfCancellationRequested();
+            if (!ancestors.Add(current))
+            {
+                Report(output, type, "A CBOR model hierarchy cannot contain an inheritance cycle.");
+                valid = false;
+                break;
+            }
+
+            if (!HasAttribute(current, "Cbor.CborObjectAttribute"))
+            {
+                Report(output, type, "Every model base class must explicitly declare CborObject; framework base classes are not inferred as wire contracts.");
+                valid = false;
+            }
+
+            hierarchy.Push(current);
+        }
+
+        var slots = new List<ContractSlot>();
+        var byName = new Dictionary<string, int>(StringComparer.Ordinal);
+        while (hierarchy.Count != 0)
+        {
+            var current = hierarchy.Pop();
+            foreach (var symbol in current.GetMembers())
+            {
+                output.CancellationToken.ThrowIfCancellationRequested();
+                if (symbol.IsImplicitlyDeclared)
+                {
+                    continue;
+                }
+
+                bool existing = byName.TryGetValue(symbol.Name, out int index);
+                var inherited = existing ? slots[index] : null;
+                if (symbol is not (IPropertySymbol or IFieldSymbol))
+                {
+                    if (inherited?.Key is not null)
+                    {
+                        Report(output, symbol, "A member cannot hide an inherited keyed CBOR member.");
+                        valid = false;
+                    }
+
+                    continue;
+                }
+
+                var key = Attribute(symbol, "Cbor.CborKeyAttribute");
+                bool ignored = HasAttribute(symbol, "Cbor.CborIgnoreAttribute");
+                if (symbol.IsStatic)
+                {
+                    if (inherited?.Key is not null)
+                    {
+                        Report(output, symbol, "A static member cannot hide an inherited keyed CBOR member.");
+                        valid = false;
+                    }
+
+                    slots.Add(new ContractSlot(symbol, key, ignored));
+                    continue;
+                }
+
+                if (inherited is not null && symbol is IPropertySymbol { OverriddenProperty: not null } property &&
+                    SymbolEqualityComparer.Default.Equals(property.OverriddenProperty, inherited.Symbol))
+                {
+                    if (inherited.Key is not null && (ignored || (key is not null && !SameKeyContract(key, inherited.Key))))
+                    {
+                        Report(output, symbol, "A CBOR property override must preserve its inherited key and Required contract, and cannot ignore a keyed slot.");
+                        valid = false;
+                    }
+
+                    key ??= inherited.Key;
+                    ignored |= key is null && inherited.Ignored;
+                }
+                else if (inherited?.Key is not null)
+                {
+                    Report(output, symbol, "A member cannot hide an inherited keyed CBOR member; use a property override that preserves the slot contract.");
+                    valid = false;
+                }
+
+                if (!ignored && key is null && symbol.DeclaredAccessibility == Accessibility.Public)
+                {
+                    Report(output, symbol, "Every public instance member of a CBOR object needs CborKey or CborIgnore.");
+                    valid = false;
+                }
+
+                if (key is not null && (ignored || key.ConstructorArguments.Length != 1 ||
+                    key.ConstructorArguments[0].Value is not int memberKey || memberKey < 0))
+                {
+                    Report(output, symbol, "CBOR member keys must be nonnegative, and a keyed member cannot have CborIgnore.");
+                    valid = false;
+                }
+
+                var slot = new ContractSlot(symbol, key, ignored);
+                if (existing)
+                {
+                    slots[index] = slot;
+                }
+                else
+                {
+                    byName.Add(symbol.Name, slots.Count);
+                    slots.Add(slot);
+                }
+            }
+        }
+
+        return slots;
+    }
+
+    private static bool SameKeyContract(AttributeData left, AttributeData right) =>
+        left.ConstructorArguments.Length == 1 && right.ConstructorArguments.Length == 1 &&
+        Equals(left.ConstructorArguments[0].Value, right.ConstructorArguments[0].Value) &&
+        left.NamedArguments.Any(static pair => pair.Key == "Required" && pair.Value.Value is true) ==
+        right.NamedArguments.Any(static pair => pair.Key == "Required" && pair.Value.Value is true);
 
     private static void EmitEnum(StringBuilder code, INamedTypeSymbol type, int index)
     {
@@ -570,5 +773,12 @@ public sealed class CborGenerator : IIncrementalGenerator
         internal int Key { get; } = key;
         internal bool Required { get; } = required;
         internal bool Writable { get; } = writable;
+    }
+
+    private sealed class ContractSlot(ISymbol symbol, AttributeData? key, bool ignored)
+    {
+        internal ISymbol Symbol { get; } = symbol;
+        internal AttributeData? Key { get; } = key;
+        internal bool Ignored { get; } = ignored;
     }
 }

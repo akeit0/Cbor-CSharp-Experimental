@@ -1,11 +1,12 @@
 namespace Cbor;
 
 /// <summary>Opts a class or struct into explicit-key, generated CBOR map serialization.</summary>
+/// <remarks>Closed generic models are supported. Model base classes must also opt in; their keyed slots form one map with the derived contract.</remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
 public sealed class CborObjectAttribute : Attribute;
 
 /// <summary>Assigns a stable, nonnegative integer wire key to a property or field.</summary>
-/// <remarks>Keys identify members across versions. Removing a member does not free its key for reuse.</remarks>
+/// <remarks>Keys identify members across versions and must be unique throughout a model hierarchy. Virtual overrides preserve their slot's key and Required setting. Removing a member does not free its key for reuse.</remarks>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, Inherited = false)]
 public sealed class CborKeyAttribute : Attribute
 {

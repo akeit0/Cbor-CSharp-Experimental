@@ -40,6 +40,8 @@ The verification script also checks whitespace, packs/inspects the experimental 
 
 Finish builds/tests before starting benchmarks, then let the benchmark process finish before rebuilding its assemblies.
 
+`eng/verify-native.ps1 -RuntimeIdentifier win-x64` (or `linux-x64` on Linux) runs the project-based native corpus, creates a fresh package, and publishes/executes an independent Native AOT package consumer. Both native paths treat trim/AOT warnings as errors.
+
 Read [the critical quality review](docs/quality-review.md) for remaining quality and performance gaps and required work.
 See [runtime path measurements](docs/benchmarks/runtime-paths.md) for object, map, and UTF-8 workloads and reproduction instructions.
 
@@ -66,13 +68,13 @@ public sealed class Person
 public partial class AppResolver;
 ```
 
-Objects use stable integer-keyed maps. Every public instance member needs CborKey or CborIgnore. Generated readers reject repeated known keys and missing required members; unknown members are skipped with the same budgets and encoding policy. Missing optional members receive default(T). An accessible constructor can bind readonly members by name/type; CborConstructor selects one explicitly. Records, structs, nullable values, enums, arrays, lists, dictionaries, and recursive closed model graphs are supported.
+Objects use stable integer-keyed maps. Every new public instance slot needs CborKey or CborIgnore; property overrides retain their inherited slot contracts. Generated readers reject repeated known keys and missing required members; unknown members are skipped with the same budgets and encoding policy. Missing optional members receive default(T). An accessible constructor can bind readonly members by name/type; CborConstructor selects one explicitly. Records, structs, closed generic and inherited models, nullable values, enums, arrays, lists, dictionaries, and recursive closed model graphs are supported. Model bases explicitly declare CborObject; hiding keyed members or reusing keys across a hierarchy produces diagnostics.
 
 Resolver roots are explicit for Native AOT: the generator closes the entire reachable formatter graph at compile time. There is no assembly scanning, runtime generic construction, or reflection fallback. Custom thread-safe ICborFormatter<T> implementations can be registered through CborFormatterRegistry and supplied in an ordered CborCompositeResolver. Unsupported generated contracts fail with CBOR001/CBOR002 instead of silently losing members.
 
 Serialize overloads accept a value, an IBufferWriter<byte>, or a borrowed Foundation buffer. Deserialize accepts a span, segmented sequence, or bounded Foundation buffer and rejects trailing bytes. Null and undefined remain distinct. Definite and indefinite strings/collections are accepted by default; string chunks must individually contain valid UTF-8. Dictionary readers reject duplicate CLR keys and use process-keyed hashing for supported key types.
 
-Read [the typed serializer design](docs/design/typed-serializer.md) for the exact contract, limits, and remaining work. Generic/inherited model contracts, broad tagged CLR built-ins, unions/reference preservation, deterministic dictionary ordering, outer async streaming, and IDE fixes remain unfinished. These are serializer work, not reasons to redefine the project as a validator.
+Read [the typed serializer design](docs/design/typed-serializer.md) for the exact contract, limits, and remaining work. Broad tagged CLR built-ins, unions/reference preservation, deterministic dictionary ordering, outer async streaming, and IDE fixes remain unfinished. These are serializer work, not reasons to redefine the project as a validator.
 
 ## Low-level API
 

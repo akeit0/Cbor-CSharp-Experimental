@@ -148,4 +148,5 @@ if (restoredDictionary[long.MinValue] != "min")
     throw new InvalidOperationException("Native AOT process-keyed dictionary serialization failed.");
 }
 
-Console.WriteLine("CBOR Native AOT passed: bulk/seamed UTF-8, preferred float reference stores, RFC corpus, segmented primitives/generated models, immutable constructors, keyed dictionaries, and deep traversal.");
+GenericModelChecks.Run(typedOptions);
+Console.WriteLine("CBOR Native AOT passed: bulk/seamed UTF-8, preferred float reference stores, RFC corpus, segmented primitives/generated models, generic/inherited constructors, keyed dictionaries, and deep traversal.");

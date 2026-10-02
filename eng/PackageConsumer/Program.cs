@@ -68,4 +68,5 @@ if (typed.Id != 42 || typed.Name != "水😀" || typed.Values is not { Count: 2 
     throw new InvalidOperationException("Generated object serialization failed.");
 }
 
-Console.WriteLine("Installed CBOR package consumer passed: primitives and generated mutable/immutable models.");
+GenericModelChecks.Run(typedOptions);
+Console.WriteLine("Installed CBOR package consumer passed: primitives and generated mutable/immutable, generic, and inherited models.");
