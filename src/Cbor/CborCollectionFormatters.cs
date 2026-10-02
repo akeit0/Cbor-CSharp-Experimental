@@ -1,5 +1,5 @@
 using SerializerFoundation;
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
 using System.Runtime.InteropServices;
 #endif
 
@@ -19,7 +19,7 @@ public sealed class CborNullableFormatter<T> : ICborFormatter<T?> where T : stru
         if (value.HasValue)
         {
             // The nullable wrapper is the same wire item, so it does not charge a second item.
-            context.Options.Resolver.GetRequiredFormatter<T>().Serialize(ref buffer, ref context, value.Value);
+            context.GetRequiredFormatter<T>().Serialize(ref buffer, ref context, value.Value);
         }
         else
         {
@@ -34,7 +34,7 @@ public sealed class CborNullableFormatter<T> : ICborFormatter<T?> where T : stru
             , allows ref struct
 #endif
         => CborDeserializationContext.TryReadNull(ref buffer) ? null :
-            context.Options.Resolver.GetRequiredFormatter<T>().Deserialize(ref buffer, ref context);
+            context.GetRequiredFormatter<T>().Deserialize(ref buffer, ref context);
 }
 
 /// <summary>Formats CLR arrays as CBOR arrays. Byte arrays use the built-in byte-string formatter.</summary>
@@ -59,7 +59,7 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
         try
         {
             buffer.WriteArrayHeader((ulong)value.Length);
-            var formatter = value.Length == 0 ? null : context.Options.Resolver.GetRequiredFormatter<T>();
+            var formatter = value.Length == 0 ? null : context.GetRequiredFormatter<T>();
             foreach (T item in value)
             {
                 context.Serialize(ref buffer, item, formatter!);
@@ -94,7 +94,7 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
                     return Array.Empty<T>();
                 }
 
-                var formatter = context.Options.Resolver.GetRequiredFormatter<T>();
+                var formatter = context.GetRequiredFormatter<T>();
                 var result = new T[length.Value];
                 for (int i = 0; i < result.Length; i++)
                 {
@@ -109,7 +109,7 @@ public sealed class CborArrayFormatter<T> : ICborFormatter<T[]?>
                 return Array.Empty<T>();
             }
 
-            var elementFormatter = context.Options.Resolver.GetRequiredFormatter<T>();
+            var elementFormatter = context.GetRequiredFormatter<T>();
             var items = new List<T>();
             while (!buffer.TryReadBreak())
             {
@@ -148,7 +148,7 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
         try
         {
             buffer.WriteArrayHeader((ulong)value.Count);
-            var formatter = value.Count == 0 ? null : context.Options.Resolver.GetRequiredFormatter<T>();
+            var formatter = value.Count == 0 ? null : context.GetRequiredFormatter<T>();
             foreach (T item in value)
             {
                 context.Serialize(ref buffer, item, formatter!);
@@ -182,7 +182,7 @@ public sealed class CborListFormatter<T> : ICborFormatter<List<T>?>
                 return result;
             }
 
-            var formatter = context.Options.Resolver.GetRequiredFormatter<T>();
+            var formatter = context.GetRequiredFormatter<T>();
             for (int i = 0; !length.HasValue || i < length.Value; i++)
             {
                 if (!length.HasValue && buffer.TryReadBreak())
@@ -235,8 +235,8 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
         try
         {
             buffer.WriteMapHeader((ulong)value.Count);
-            var keyFormatter = value.Count == 0 ? null : context.Options.Resolver.GetRequiredFormatter<TKey>();
-            var valueFormatter = value.Count == 0 ? null : context.Options.Resolver.GetRequiredFormatter<TValue>();
+            var keyFormatter = value.Count == 0 ? null : context.GetRequiredFormatter<TKey>();
+            var valueFormatter = value.Count == 0 ? null : context.GetRequiredFormatter<TValue>();
             foreach (var pair in value)
             {
                 context.Serialize(ref buffer, pair.Key, keyFormatter!);
@@ -271,8 +271,8 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
                 return result;
             }
 
-            var keyFormatter = context.Options.Resolver.GetRequiredFormatter<TKey>();
-            var valueFormatter = context.Options.Resolver.GetRequiredFormatter<TValue>();
+            var keyFormatter = context.GetRequiredFormatter<TKey>();
+            var valueFormatter = context.GetRequiredFormatter<TValue>();
             for (int i = 0; !length.HasValue || i < length.Value; i++)
             {
                 if (!length.HasValue && buffer.TryReadBreak())
@@ -287,7 +287,7 @@ public sealed class CborDictionaryFormatter<TKey, TValue> : ICborFormatter<Dicti
                     throw new InvalidDataException("A CBOR map contains a null or duplicate dictionary key.");
                 }
 
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
                 ref TValue? slot = ref CollectionsMarshal.GetValueRefOrAddDefault(result, key, out bool exists);
                 if (exists)
                 {

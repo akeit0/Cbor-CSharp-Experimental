@@ -23,7 +23,11 @@ try {
 }
 finally { $ErrorActionPreference = $previousErrorAction }
 $diagnostics | Set-Content -LiteralPath "$taskRoot/artifacts/package-ownership-check.log"
-if ($ownershipExitCode -eq 0 -or -not ($diagnostics -match "error SF002")) {
-    throw "The installed package did not enforce single-owner buffers; see artifacts/package-ownership-check.log."
+if ($ownershipExitCode -eq 0 -or -not ($diagnostics -match "error SF002") -or -not ($diagnostics -match "error CBOR003") -or
+    -not ($diagnostics -match "ContextCollectionOwnershipViolation.cs.*error CBOR003")) {
+    throw "The installed package did not enforce single-owner buffers and contexts; see artifacts/package-ownership-check.log."
 }
-Write-Host "Fresh package installation, all consumer tiers, and SF002 enforcement passed."
+# Restore the positive variant and a successful native-command exit status after the expected failure.
+dotnet build $consumerProject -c $Configuration -f net10.0 --no-restore "-p:RestorePackagesPath=$consumerCache"
+if ($LASTEXITCODE -ne 0) { throw "Package consumer did not recover after the negative ownership check." }
+Write-Host "Fresh package installation, all consumer tiers, and SF002/CBOR003 enforcement passed."

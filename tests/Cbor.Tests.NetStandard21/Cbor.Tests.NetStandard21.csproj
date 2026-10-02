@@ -2,12 +2,12 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>$(DefineConstants);CBOR_NETSTANDARD20</DefineConstants>
+    <DefineConstants>$(DefineConstants);CBOR_NETSTANDARD21</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <!-- Execute the oldest asset rather than letting net8 select its dedicated asset. -->
-    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" />
+    <!-- Keep the legacy netstandard2.1 asset covered when net8 selects its dedicated asset. -->
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.1" SkipGetTargetFrameworkProperties="true" />
     <Compile Include="../Shared/IntegerHarness.cs" Link="IntegerHarness.cs" />
     <Compile Include="../Cbor.Tests/TypedSerializationTests.cs" Link="TypedSerializationTests.cs" />
     <Compile Include="../Cbor.Tests/RuntimeImprovementTests.cs" Link="RuntimeImprovementTests.cs" />

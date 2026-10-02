@@ -117,6 +117,28 @@
         "contentHash": "rTxoBMs0Ze4QlSreGzvVnJLkBeOz5hXPMzW6+l9YkkfhTVFCVY9sETnrM3T5ReaDVWXewtJb6hyXqveAkf/p4A=="
       }
     },
+    "net8.0": {
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[8.0.31, )",
+        "resolved": "8.0.31",
+        "contentHash": "OJdAGATV2QoVWL11zlDLEluA06q8rK+cgZR47ohrO8V+Qj5z9dlvN7bG9/0e5t0IOe+yD8tREC0bpsEgDGrzIQ=="
+      },
+      "SerializerFoundation": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "rTxoBMs0Ze4QlSreGzvVnJLkBeOz5hXPMzW6+l9YkkfhTVFCVY9sETnrM3T5ReaDVWXewtJb6hyXqveAkf/p4A==",
+        "dependencies": {
+          "System.IO.Pipelines": "10.0.0"
+        }
+      },
+      "System.IO.Pipelines": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "M1eb3nfXntaRJPrrMVM9EFS8I1bDTnt0uvUS6QP/SicZf/ZZjydMD5NiXxfmwW/uQwaMDP/yX2P+zQN1NBHChg=="
+      }
+    },
     "net9.0": {
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",

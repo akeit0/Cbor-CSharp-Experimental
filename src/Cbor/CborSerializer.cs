@@ -17,13 +17,15 @@ public static class CborSerializer
 #else
         var buffer = new CompatibleArrayPoolListWriteBuffer();
 #endif
+        var context = new CborSerializationContext(options ?? CborSerializerOptions.Default);
         try
         {
-            Serialize(ref buffer, value, options);
+            context.Serialize(ref buffer, value);
             return buffer.ToArray();
         }
         finally
         {
+            context.Dispose();
             buffer.Dispose();
         }
     }
@@ -31,7 +33,7 @@ public static class CborSerializer
     /// <summary>Serializes into a caller's writer; the writer is not disposed.</summary>
     public static void Serialize<T>(IBufferWriter<byte> destination, T value, CborSerializerOptions? options = null)
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(destination);
 #else
         if (destination is null)
@@ -45,13 +47,15 @@ public static class CborSerializer
 #else
         var buffer = new CompatibleBufferWriterWriteBuffer(destination);
 #endif
+        var context = new CborSerializationContext(options ?? CborSerializerOptions.Default);
         try
         {
-            Serialize(ref buffer, value, options);
+            context.Serialize(ref buffer, value);
             buffer.Flush();
         }
         finally
         {
+            context.Dispose();
             buffer.Dispose();
         }
     }
@@ -64,7 +68,14 @@ public static class CborSerializer
 #endif
     {
         var context = new CborSerializationContext(options ?? CborSerializerOptions.Default, buffer.BytesWritten);
-        context.Serialize(ref buffer, value);
+        try
+        {
+            context.Serialize(ref buffer, value);
+        }
+        finally
+        {
+            context.Dispose();
+        }
     }
 
     /// <summary>Deserializes a borrowed span without first copying or validating the complete item.</summary>
@@ -72,24 +83,28 @@ public static class CborSerializer
     {
 #if NET9_0_OR_GREATER
         var buffer = new ReadOnlySpanReadBuffer(source);
+        var context = new CborDeserializationContext(options ?? CborSerializerOptions.Default, source.Length);
         try
         {
-            return Deserialize<ReadOnlySpanReadBuffer, T>(ref buffer, options);
+            return DeserializeCore<ReadOnlySpanReadBuffer, T>(ref buffer, ref context);
         }
         finally
         {
+            context.Dispose();
             buffer.Dispose();
         }
 #else
         fixed (byte* pointer = source)
         {
             var buffer = new CompatibleReadOnlySpanReadBuffer(pointer, source.Length);
+            var context = new CborDeserializationContext(options ?? CborSerializerOptions.Default, source.Length);
             try
             {
-                return Deserialize<CompatibleReadOnlySpanReadBuffer, T>(ref buffer, options);
+                return DeserializeCore<CompatibleReadOnlySpanReadBuffer, T>(ref buffer, ref context);
             }
             finally
             {
+                context.Dispose();
                 buffer.Dispose();
             }
         }
@@ -99,22 +114,24 @@ public static class CborSerializer
     /// <summary>Deserializes segmented input without flattening it.</summary>
     public static T Deserialize<T>(in ReadOnlySequence<byte> source, CborSerializerOptions? options = null)
     {
+        var context = new CborDeserializationContext(options ?? CborSerializerOptions.Default, source.Length);
 #if NET9_0_OR_GREATER
         Span<byte> scratch = stackalloc byte[CborPrimitives.MaxHeaderLength];
         var buffer = new ReadOnlySequenceReadBuffer(in source, scratch);
         try
         {
-            return Deserialize<ReadOnlySequenceReadBuffer, T>(ref buffer, options);
+            return DeserializeCore<ReadOnlySequenceReadBuffer, T>(ref buffer, ref context);
         }
 #else
         var buffer = new CompatibleReadOnlySequenceReadBuffer(in source);
         try
         {
-            return Deserialize<CompatibleReadOnlySequenceReadBuffer, T>(ref buffer, options);
+            return DeserializeCore<CompatibleReadOnlySequenceReadBuffer, T>(ref buffer, ref context);
         }
 #endif
         finally
         {
+            context.Dispose();
             buffer.Dispose();
         }
     }
@@ -127,6 +144,22 @@ public static class CborSerializer
 #endif
     {
         var context = new CborDeserializationContext(options ?? CborSerializerOptions.Default, buffer.BytesRemaining);
+        try
+        {
+            return DeserializeCore<TReadBuffer, T>(ref buffer, ref context);
+        }
+        finally
+        {
+            context.Dispose();
+        }
+    }
+
+    private static T DeserializeCore<TReadBuffer, T>(ref TReadBuffer buffer, ref CborDeserializationContext context)
+        where TReadBuffer : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+    {
         T value = context.Deserialize<TReadBuffer, T>(ref buffer);
         if (buffer.BytesRemaining != 0)
         {

@@ -15,11 +15,13 @@ try {
     $required = @(
         "lib/netstandard2.0/Cbor.dll",
         "lib/netstandard2.1/Cbor.dll",
+        "lib/net8.0/Cbor.dll",
         "lib/net9.0/Cbor.dll",
         "lib/net10.0/Cbor.dll",
         "analyzers/dotnet/cs/Cbor.SourceGenerator.dll",
         "analyzers/dotnet/cs/Cbor.SourceGenerator.CodeFixes.dll",
-        "README.md"
+        "README.md",
+        "THIRD-PARTY-NOTICES.txt"
     )
     foreach ($entry in $required) {
         if ($paths -notcontains $entry) { throw "Package is missing $entry." }

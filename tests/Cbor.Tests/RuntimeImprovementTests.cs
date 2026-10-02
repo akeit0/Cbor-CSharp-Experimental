@@ -113,8 +113,11 @@ public sealed class RuntimeImprovementTests
             .Add(new CborDictionaryFormatter<int, int>(comparer)).Build());
         var result = CborSerializer.Deserialize<Dictionary<int, int>>(Convert.FromHexString(hex), options);
         Assert.Equal(3, result.Count);
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER && !CBOR_NETSTANDARD20 && !CBOR_NETSTANDARD21
         Assert.Equal(3, comparer.HashCalls);
+#else
+        // A definite map preallocates buckets, so ContainsKey hashes even the first key.
+        Assert.Equal(hex[0] == 'A' ? 6 : 5, comparer.HashCalls);
 #endif
         Assert.Same(comparer, result.Comparer);
         Assert.Equal(3, result[2]);

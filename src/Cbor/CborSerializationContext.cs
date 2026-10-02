@@ -1,11 +1,16 @@
+using System.Runtime.CompilerServices;
+using Cbor.Internal;
 using SerializerFoundation;
 
 namespace Cbor;
 
 /// <summary>Shared write limits and formatter resolution for one operation.</summary>
-public struct CborSerializationContext
+/// <remarks>Single-owner mutable state: pass by ref, never copy or box, and dispose in finally.</remarks>
+public struct CborSerializationContext : IDisposable
 {
     private readonly CborSerializerOptions options;
+    private readonly bool builtinResolution;
+    private OperationFormatterCache formatters;
     private int depth;
     private long items;
     private readonly long start;
@@ -14,10 +19,22 @@ public struct CborSerializationContext
     public CborSerializationContext(CborSerializerOptions options, long bytesWritten = 0)
     {
         this.options = options ?? throw new ArgumentNullException(nameof(options));
+        builtinResolution = options.Resolver is CborBuiltinResolver;
         start = bytesWritten;
+        formatters = default;
         depth = 0;
         items = 0;
     }
+
+    /// <summary>Resolves each type lazily and shares its formatter throughout this operation.</summary>
+    /// <remarks>Resolver changes take effect on the next operation. Formatters must be stateless and thread-safe.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ICborFormatter<T> GetRequiredFormatter<T>() => builtinResolution
+        ? CborBuiltinResolver.Instance.GetRequiredFormatter<T>()
+        : formatters.GetRequiredFormatter<T>(options.Resolver);
+
+    /// <summary>Releases pooled formatter storage. Dispose once after completing or abandoning the operation.</summary>
+    public void Dispose() => formatters.Dispose();
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
@@ -31,7 +48,7 @@ public struct CborSerializationContext
     {
         ChargeItem();
 
-        SerializeCore(ref buffer, value, options.Resolver.GetRequiredFormatter<T>());
+        SerializeCore(ref buffer, value, GetRequiredFormatter<T>());
     }
 
     /// <summary>Serializes with a formatter resolved from this operation's resolver, retaining shared budgets.</summary>
@@ -42,7 +59,7 @@ public struct CborSerializationContext
             , allows ref struct
 #endif
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(formatter);
 #else
         if (formatter is null)
@@ -72,7 +89,7 @@ public struct CborSerializationContext
             , allows ref struct
 #endif
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(key);
 #else
         if (key < 0)
@@ -133,7 +150,7 @@ public struct CborSerializationContext
     /// <param name="additionalLength">Bytes about to be written, including their headers.</param>
     public readonly void CheckEncodedLength(long bytesWritten, long additionalLength = 0)
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(additionalLength);
 #else
         if (additionalLength < 0)

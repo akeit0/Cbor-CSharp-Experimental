@@ -10,7 +10,7 @@ public sealed class CborSerializerOptions
     public CborSerializerOptions(CborFormatterResolver? resolver = null, CborReaderOptions? readerOptions = null,
         int maxCollectionLength = 1_000_000, int maxStringLength = 16 * 1024 * 1024)
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(maxCollectionLength);
         ArgumentOutOfRangeException.ThrowIfNegative(maxStringLength);
 #else

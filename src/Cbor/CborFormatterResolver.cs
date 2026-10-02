@@ -19,7 +19,7 @@ public sealed class CborCompositeResolver : CborFormatterResolver
     /// <summary>Copies the resolver sequence so later caller mutations cannot change selection.</summary>
     public CborCompositeResolver(params CborFormatterResolver[] resolvers)
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(resolvers);
 #else
         if (resolvers is null)
@@ -59,7 +59,7 @@ public sealed class CborFormatterRegistry
     /// <summary>Registers a thread-safe formatter. Duplicate registrations are rejected.</summary>
     public CborFormatterRegistry Add<T>(ICborFormatter<T> formatter)
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(formatter);
 #else
         if (formatter is null)

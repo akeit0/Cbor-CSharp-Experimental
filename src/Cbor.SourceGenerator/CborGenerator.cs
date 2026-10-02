@@ -574,11 +574,11 @@ public sealed class CborGenerator : IIncrementalGenerator
             .Append("        public void Serialize<W>(ref W buffer, ref global::Cbor.CborSerializationContext context, ")
             .Append(model).Append(" value)\n");
         Constraint(code, "W", "IWriteBuffer");
-        code.Append("            => context.Options.Resolver.GetRequiredFormatter<").Append(underlying)
+        code.Append("            => context.GetRequiredFormatter<").Append(underlying)
             .Append(">().Serialize(ref buffer, ref context, (").Append(underlying).Append(")value);\n")
             .Append("        public ").Append(model).Append(" Deserialize<R>(ref R buffer, ref global::Cbor.CborDeserializationContext context)\n");
         Constraint(code, "R", "IReadBuffer");
-        code.Append("            => (").Append(model).Append(")context.Options.Resolver.GetRequiredFormatter<")
+        code.Append("            => (").Append(model).Append(")context.GetRequiredFormatter<")
             .Append(underlying).Append(">().Deserialize(ref buffer, ref context);\n    }\n");
     }
 
@@ -623,7 +623,7 @@ public sealed class CborGenerator : IIncrementalGenerator
             code.Append("                context.WriteObjectKey(ref buffer, ").Append(member.Key.ToString(CultureInfo.InvariantCulture)).Append(");\n")
                 .Append("                context.Serialize<W, ").Append(Name(member.Type)).Append(">(ref buffer, value.@")
                 .Append(member.Name).Append("!, formatter")
-                .Append(formatterIndices[i].ToString(CultureInfo.InvariantCulture)).Append(" ??= context.Options.Resolver.GetRequiredFormatter<")
+                .Append(formatterIndices[i].ToString(CultureInfo.InvariantCulture)).Append(" ??= context.GetRequiredFormatter<")
                 .Append(Name(member.Type)).Append(">());\n");
         }
 
@@ -659,7 +659,7 @@ public sealed class CborGenerator : IIncrementalGenerator
                 .Append("                            seen").Append(local).Append(" = true;\n")
                 .Append("                            value").Append(local).Append(" = context.Deserialize<R, ").Append(Name(member.Type))
                 .Append(">(ref buffer, formatter").Append(formatterIndices[i].ToString(CultureInfo.InvariantCulture))
-                .Append(" ??= context.Options.Resolver.GetRequiredFormatter<").Append(Name(member.Type)).Append(">());\n")
+                .Append(" ??= context.GetRequiredFormatter<").Append(Name(member.Type)).Append(">());\n")
                 .Append("                            break;\n");
         }
 

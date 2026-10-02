@@ -46,10 +46,14 @@ public sealed class BufferTierTests
             typeof(CborPrimitives).Assembly, typeof(TargetFrameworkAttribute));
 #if CBOR_NETSTANDARD20
         const string expected = ".NETStandard,Version=v2.0";
+#elif CBOR_NETSTANDARD21
+        const string expected = ".NETStandard,Version=v2.1";
 #elif NET10_0_OR_GREATER
         const string expected = ".NETCoreApp,Version=v10.0";
 #elif NET9_0_OR_GREATER
         const string expected = ".NETCoreApp,Version=v9.0";
+#elif NET8_0_OR_GREATER
+        const string expected = ".NETCoreApp,Version=v8.0";
 #else
         const string expected = ".NETStandard,Version=v2.1";
 #endif

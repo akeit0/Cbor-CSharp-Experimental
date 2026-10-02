@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <Compile Include="../Cbor.Benchmarks/Program.cs" Link="Program.cs" />
+    <Compile Include="../Cbor.Benchmarks/NestedModelBenchmarks.cs" Link="NestedModelBenchmarks.cs" />
+    <Compile Include="../Cbor.Benchmarks/RuntimePathBenchmarks.cs" Link="RuntimePathBenchmarks.cs" />
+  </ItemGroup>
+</Project>

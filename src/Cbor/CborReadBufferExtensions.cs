@@ -339,7 +339,7 @@ public static class CborReadBufferExtensions
         , allows ref struct
 #endif
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentOutOfRangeException.ThrowIfNegative(maxLength);
 #else
         if (maxLength < 0)

@@ -7,6 +7,8 @@ namespace Cbor.Benchmarks;
 [MemoryDiagnoser]
 public class RuntimePathBenchmarks
 {
+    private readonly byte[] encodedScalar = [1];
+    private readonly int scalar = 1;
     private static readonly CborSerializerOptions Options = new(RuntimePathResolver.Instance);
     private readonly RepeatedMembers model = new() { A = 1, B = 2, C = 3, D = 4, E = 5, F = 6, G = 7, H = 8 };
     private byte[] encodedModel = [];
@@ -44,6 +46,8 @@ public class RuntimePathBenchmarks
         }
     }
 
+    [Benchmark] public byte[] EncodeScalar() => CborSerializer.Serialize(scalar);
+    [Benchmark] public int DecodeScalar() => CborSerializer.Deserialize<int>(encodedScalar);
     [Benchmark] public byte[] EncodeRepeatedMembers() => CborSerializer.Serialize(model, Options);
     [Benchmark] public RepeatedMembers DecodeRepeatedMembers() => CborSerializer.Deserialize<RepeatedMembers>(encodedModel, Options);
     [Benchmark] public Dictionary<int, int> DecodeIntegerMap() => CborSerializer.Deserialize<Dictionary<int, int>>(integerMap, Options);

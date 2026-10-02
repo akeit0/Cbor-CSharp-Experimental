@@ -6,6 +6,7 @@
     <File Path="global.json" />
     <File Path="NuGet.Config" />
     <File Path="README.md" />
+    <File Path="THIRD-PARTY-NOTICES.txt" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/research.md" />
@@ -14,6 +15,7 @@
     <File Path="docs/design/primitive-layer.md" />
     <File Path="docs/design/typed-serializer.md" />
     <File Path="docs/benchmarks/runtime-paths.md" />
+    <File Path="docs/benchmarks/operation-resolution.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Cbor/Cbor.csproj" />
@@ -23,12 +25,15 @@
   <Folder Name="/tests/">
     <Project Path="tests/Cbor.Tests.SourceGenerator/Cbor.Tests.SourceGenerator.csproj" />
     <Project Path="tests/Cbor.Tests/Cbor.Tests.csproj" />
+    <Project Path="tests/Cbor.Tests.NetStandard21/Cbor.Tests.NetStandard21.csproj" />
     <Project Path="tests/Cbor.Tests.NetStandard20/Cbor.Tests.NetStandard20.csproj" />
     <Project Path="tests/Cbor.Tests.Conformance/Cbor.Tests.Conformance.csproj" />
     <Project Path="tests/Cbor.Tests.Robustness/Cbor.Tests.Robustness.csproj" />
     <Project Path="tests/Cbor.Tests.NativeAot/Cbor.Tests.NativeAot.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Cbor.Benchmarks.Net8/Cbor.Benchmarks.Net8.csproj" />
+    <Project Path="benchmarks/Cbor.Benchmarks.NetStandard20/Cbor.Benchmarks.NetStandard20.csproj" />
     <Project Path="benchmarks/Cbor.Benchmarks/Cbor.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/sandbox/">

@@ -5,9 +5,12 @@ using SerializerFoundation;
 namespace Cbor;
 
 /// <summary>Shared read budgets and formatter resolution, including unknown-member traversal.</summary>
-public struct CborDeserializationContext
+/// <remarks>Single-owner mutable state: pass by ref, never copy or box, and dispose in finally.</remarks>
+public struct CborDeserializationContext : IDisposable
 {
     private readonly CborSerializerOptions options;
+    private readonly bool builtinResolution;
+    private OperationFormatterCache formatters;
     private int depth;
     private long items;
     private long declaredElements;
@@ -16,15 +19,27 @@ public struct CborDeserializationContext
     public CborDeserializationContext(CborSerializerOptions options, long messageLength)
     {
         this.options = options ?? throw new ArgumentNullException(nameof(options));
+        builtinResolution = options.Resolver is CborBuiltinResolver;
         if (messageLength < 0 || messageLength > options.ReaderOptions.MaxEncodedLength)
         {
             throw new InvalidDataException("The CBOR encoded byte budget was exceeded.");
         }
 
         declaredElements = messageLength;
+        formatters = default;
         depth = 0;
         items = 0;
     }
+
+    /// <summary>Resolves each type lazily and shares its formatter throughout this operation.</summary>
+    /// <remarks>Resolver changes take effect on the next operation. Formatters must be stateless and thread-safe.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ICborFormatter<T> GetRequiredFormatter<T>() => builtinResolution
+        ? CborBuiltinResolver.Instance.GetRequiredFormatter<T>()
+        : formatters.GetRequiredFormatter<T>(options.Resolver);
+
+    /// <summary>Releases pooled formatter storage. Dispose once after completing or abandoning the operation.</summary>
+    public void Dispose() => formatters.Dispose();
 
     /// <summary>Immutable options for this operation.</summary>
     public readonly CborSerializerOptions Options => options;
@@ -38,7 +53,7 @@ public struct CborDeserializationContext
     {
         ChargeItem();
         CheckNextValue(ref buffer);
-        return options.Resolver.GetRequiredFormatter<T>().Deserialize(ref buffer, ref this);
+        return GetRequiredFormatter<T>().Deserialize(ref buffer, ref this);
     }
 
     /// <summary>Deserializes with a formatter resolved from this operation's resolver, retaining shared policies and budgets.</summary>
@@ -49,7 +64,7 @@ public struct CborDeserializationContext
             , allows ref struct
 #endif
     {
-#if NET9_0_OR_GREATER
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(formatter);
 #else
         if (formatter is null)

@@ -5,3 +5,4 @@ Rule ID | Category | Severity | Notes
 --------|----------|----------|------
 CBOR001 | Cbor | Error | Invalid explicit object or resolver contract
 CBOR002 | Cbor | Error | Unsupported type in a generated formatter graph
+CBOR003 | Cbor | Error | Operation contexts must not be copied or boxed

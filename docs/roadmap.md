@@ -17,7 +17,7 @@ Aim for a complete serializer and the reference project's depth of evidence. Pro
 
 The experimental public API and model attributes live in Cbor. ICborFormatter<T>, immutable resolver snapshots, per-operation contexts, serializer entry points, and explicit generated resolver roots are implemented. No release API baseline is frozen yet. The unsigned-integer prototype has been removed; samples and installed consumers use generated models.
 
-Current evidence includes RFC Appendix A/F fixtures, exhaustive half decoding, execution of all four runtime assets, bounded iterative traversal, strict UTF-8, independent generated-value/mutation comparisons, native publishing, and installed-package analyzer enforcement. See docs/design/primitive-layer.md for semantic boundaries.
+Current evidence includes RFC Appendix A/F fixtures, exhaustive half decoding, execution of all five runtime assets, bounded iterative traversal, strict UTF-8, independent generated-value/mutation comparisons, native publishing, and installed-package analyzer enforcement. See docs/design/primitive-layer.md for semantic boundaries.
 
 Typed/generated evidence includes mutable/immutable models, constructor binding, records, structs, enums, nullable values, arrays/lists/dictionaries, recursive graphs, required/duplicate/unknown keys, shared budgets, chunked strings, process-keyed hashing, and independent nested-object interop. The dedicated generator suite exercises unsupported contracts and input edits. Native and installed-package consumers compile and execute generated contracts.
 
