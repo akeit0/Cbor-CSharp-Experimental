@@ -1,0 +1,15 @@
+case,launch,gen0,gen1,gen2,total_allocated_bytes,operations,allocated_bytes_per_operation
+NestedModelComparison.PeterODecode/OrderCount=1,1,66,1,0,1049900544,47344,22176.0
+NestedModelComparison.PeterODecode/OrderCount=1,2,65,1,0,1024353792,46192,22176.0
+NestedModelComparison.PeterODecode/OrderCount=64,1,59,49,0,929122560,720,1290448.0
+NestedModelComparison.PeterODecode/OrderCount=64,2,60,49,0,949769728,736,1290448.0
+StringMapComparison.CborDecode,1,60,14,0,950308224,13168,72168.0
+StringMapComparison.CborDecode,2,60,14,0,942225408,13056,72168.0
+StringMapComparison.MessagePackV4Decode,1,86,21,0,1354449024,18768,72168.0
+StringMapComparison.MessagePackV4Decode,2,88,21,0,1391399040,19280,72168.0
+StringMapComparison.REDoxDecode,1,59,14,0,927214592,12848,72168.0099626401
+StringMapComparison.REDoxDecode,2,58,14,0,926059904,12832,72168.00997506235
+StringMapComparison.SystemFormatsDecode,1,81,26,0,1281128832,8784,145848.0
+StringMapComparison.SystemFormatsDecode,2,71,23,0,1127113344,7728,145848.0
+StringMapComparison.PeterODecode,1,39,18,0,623493120,1024,608880.0
+StringMapComparison.PeterODecode,2,37,17,0,594266880,976,608880.0

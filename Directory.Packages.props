@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- The pinned upstream submodule owns its explicit dependency versions. -->
+    <_IsComparisonUpstreamProject>$([System.String]::Copy('$(MSBuildProjectDirectory)').StartsWith($([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'external', 'MessagePack-CSharp'))))</_IsComparisonUpstreamProject>
+    <ManagePackageVersionsCentrally Condition="'$(_IsComparisonUpstreamProject)' != 'true'">true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Cbor" Version="$(Version)" />
@@ -15,5 +17,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="System.Formats.Cbor" Version="10.0.12" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="CAPCOM.REDox.Cbor" Version="1.0.0" />
+    <PackageVersion Include="PeterO.Cbor" Version="4.5.5" />
   </ItemGroup>
 </Project>

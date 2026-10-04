@@ -22,7 +22,7 @@ internal sealed class BooleanFormatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class ByteFormatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, byte>
+    ICborFormatter<TWriteBuffer, TReadBuffer, byte>, IIntegerArrayWriter<TWriteBuffer, byte>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -32,6 +32,9 @@ internal sealed class ByteFormatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, byte>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<byte> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, byte, ByteElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, byte value)
@@ -41,7 +44,7 @@ internal sealed class ByteFormatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class SByteFormatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, sbyte>
+    ICborFormatter<TWriteBuffer, TReadBuffer, sbyte>, IIntegerArrayWriter<TWriteBuffer, sbyte>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -51,6 +54,9 @@ internal sealed class SByteFormatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, sbyte>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<sbyte> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, sbyte, SByteElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, sbyte value)
@@ -60,7 +66,7 @@ internal sealed class SByteFormatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class Int16Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, short>
+    ICborFormatter<TWriteBuffer, TReadBuffer, short>, IIntegerArrayWriter<TWriteBuffer, short>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -70,6 +76,9 @@ internal sealed class Int16Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, short>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<short> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, short, Int16ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, short value)
@@ -79,7 +88,7 @@ internal sealed class Int16Formatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class UInt16Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, ushort>
+    ICborFormatter<TWriteBuffer, TReadBuffer, ushort>, IIntegerArrayWriter<TWriteBuffer, ushort>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -89,6 +98,9 @@ internal sealed class UInt16Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, ushort>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<ushort> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, ushort, UInt16ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, ushort value)
@@ -98,7 +110,7 @@ internal sealed class UInt16Formatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class Int32Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, int>
+    ICborFormatter<TWriteBuffer, TReadBuffer, int>, IIntegerArrayWriter<TWriteBuffer, int>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -108,6 +120,9 @@ internal sealed class Int32Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, int>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<int> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, int, Int32ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, int value)
@@ -117,7 +132,7 @@ internal sealed class Int32Formatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class UInt32Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, uint>
+    ICborFormatter<TWriteBuffer, TReadBuffer, uint>, IIntegerArrayWriter<TWriteBuffer, uint>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -127,6 +142,9 @@ internal sealed class UInt32Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, uint>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<uint> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, uint, UInt32ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, uint value)
@@ -136,7 +154,7 @@ internal sealed class UInt32Formatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class Int64Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, long>
+    ICborFormatter<TWriteBuffer, TReadBuffer, long>, IIntegerArrayWriter<TWriteBuffer, long>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -146,6 +164,9 @@ internal sealed class Int64Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, long>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<long> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, long, Int64ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, long value)
@@ -155,7 +176,7 @@ internal sealed class Int64Formatter<TWriteBuffer, TReadBuffer> :
 }
 
 internal sealed class UInt64Formatter<TWriteBuffer, TReadBuffer> :
-    ICborFormatter<TWriteBuffer, TReadBuffer, ulong>
+    ICborFormatter<TWriteBuffer, TReadBuffer, ulong>, IIntegerArrayWriter<TWriteBuffer, ulong>
     where TWriteBuffer : struct, IWriteBuffer
 #if NET9_0_OR_GREATER
     , allows ref struct
@@ -165,6 +186,9 @@ internal sealed class UInt64Formatter<TWriteBuffer, TReadBuffer> :
     , allows ref struct
 #endif
 {
+    void IIntegerArrayWriter<TWriteBuffer, ulong>.WriteElements(ref TWriteBuffer buffer, ref CborSerializationContext context, ReadOnlySpan<ulong> source)
+        => IntegerArrayWriter.WriteElements<TWriteBuffer, TReadBuffer, ulong, UInt64ElementWriter>(ref buffer, ref context, source, this);
+
     /// <inheritdoc />
     public void Initialize(CborFormatterResolver resolver) { }
     public void Serialize(ref TWriteBuffer buffer, ref CborSerializationContext context, ulong value)

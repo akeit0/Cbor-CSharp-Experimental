@@ -7,8 +7,8 @@
   <ItemGroup>
     <!-- BDN's generated consumer otherwise reselects net8 through transitive project references. -->
     <ProjectReference Include="../../src/Cbor/Cbor.csproj" SetTargetFramework="TargetFramework=netstandard2.0" SkipGetTargetFrameworkProperties="true" ReferenceOutputAssembly="false" />
-    <Reference Include="Cbor">
-      <HintPath>../../src/Cbor/bin/$(Configuration)/netstandard2.0/Cbor.dll</HintPath>
+    <Reference Include="Cbor.CSharp">
+      <HintPath>../../src/Cbor/bin/$(Configuration)/netstandard2.0/Cbor.CSharp.dll</HintPath>
     </Reference>
     <ProjectReference Include="../../src/Cbor.SourceGenerator/Cbor.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <PackageReference Include="BenchmarkDotNet" />

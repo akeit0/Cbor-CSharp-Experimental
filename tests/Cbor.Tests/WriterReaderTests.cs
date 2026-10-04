@@ -314,4 +314,229 @@ public sealed class WriterReaderTests
             reader.Dispose();
         }
     }
+
+    [Theory]
+    [InlineData("1BFFFFFFFFFFFFFFFF")]
+    [InlineData("3BFFFFFFFFFFFFFFFF")]
+    [InlineData("5800")]
+    [InlineData("7800")]
+    [InlineData("9800")]
+    [InlineData("B800")]
+    [InlineData("D81800")]
+    [InlineData("F820")]
+    [InlineData("F93C00")]
+    [InlineData("FA3F800000")]
+    [InlineData("FB3FF0000000000000")]
+    public void CompleteExtendedPrefixesReachCustomFormattersAcrossSeams(string hex)
+    {
+        byte[] bytes = Convert.FromHexString(hex);
+        var factory = new PrefixProbeFactory();
+        var options = new CborSerializerOptions(factory);
+        CborSerializer.Deserialize<PrefixProbe>(bytes, options);
+        Assert.Equal(1, factory.Reads);
+        var sequence = Cbor.Testing.IntegerHarness.Fragment(bytes);
+        CborSerializer.Deserialize<PrefixProbe>(in sequence, options);
+        Assert.Equal(2, factory.Reads);
+    }
+
+    [Theory]
+    [InlineData("1C", false)]
+    [InlineData("3F", false)]
+    [InlineData("DF", false)]
+    [InlineData("FC", false)]
+    [InlineData("FF", false)]
+    [InlineData("F818", false)]
+    [InlineData("18", true)]
+    [InlineData("1B000000", true)]
+    [InlineData("FB000000", true)]
+    public void MalformedExtendedPrefixesFailBeforeCustomFormatters(string hex, bool truncated)
+    {
+        byte[] bytes = Convert.FromHexString(hex);
+        var factory = new PrefixProbeFactory();
+        var options = new CborSerializerOptions(factory);
+        if (truncated)
+        {
+            Assert.Throws<EndOfStreamException>(() => CborSerializer.Deserialize<PrefixProbe>(bytes, options));
+        }
+        else
+        {
+            Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<PrefixProbe>(bytes, options));
+        }
+        Assert.Equal(0, factory.Reads);
+    }
+
+    [Theory]
+    [InlineData("1B0000000000000001")]
+    [InlineData("3800")]
+    [InlineData("5800")]
+    [InlineData("7800")]
+    [InlineData("9800")]
+    [InlineData("B800")]
+    [InlineData("D80100")]
+    [InlineData("FA3F800000")]
+    [InlineData("FB3FF0000000000000")]
+    public void PreferredPrefixPolicyStillPrecedesCustomFormatters(string hex)
+    {
+        var factory = new PrefixProbeFactory();
+        var options = new CborSerializerOptions(factory, new CborReaderOptions(requirePreferredEncoding: true));
+        Assert.Throws<InvalidDataException>(() => CborSerializer.Deserialize<PrefixProbe>(Convert.FromHexString(hex), options));
+        Assert.Equal(0, factory.Reads);
+    }
+
+    [Fact]
+    public void BuiltinIntegerArrayBatchesMatchRfcTokensAndStayInsideExactWindows()
+    {
+        CheckIntegerArrays<byte>([0, 23, 24, byte.MaxValue], ["00", "17", "1818", "18FF"]);
+        CheckIntegerArrays<sbyte>([sbyte.MinValue, -25, -24, -1, 0, 23, 24, sbyte.MaxValue],
+            ["387F", "3818", "37", "20", "00", "17", "1818", "187F"]);
+        CheckIntegerArrays<short>([short.MinValue, -257, -256, -25, -24, 0, 256, short.MaxValue],
+            ["397FFF", "390100", "38FF", "3818", "37", "00", "190100", "197FFF"]);
+        CheckIntegerArrays<ushort>([0, 23, 24, 255, 256, ushort.MaxValue],
+            ["00", "17", "1818", "18FF", "190100", "19FFFF"]);
+        CheckIntegerArrays<int>([int.MinValue, -65537, -65536, -257, -256, -25, -24, 0, 23, 24, 255, 256, 65535, 65536, int.MaxValue],
+            ["3A7FFFFFFF", "3A00010000", "39FFFF", "390100", "38FF", "3818", "37", "00", "17", "1818", "18FF", "190100", "19FFFF", "1A00010000", "1A7FFFFFFF"]);
+        CheckIntegerArrays<uint>([0, 23, 24, 255, 256, 65535, 65536, uint.MaxValue],
+            ["00", "17", "1818", "18FF", "190100", "19FFFF", "1A00010000", "1AFFFFFFFF"]);
+        CheckIntegerArrays<long>([long.MinValue, -4294967297, -4294967296, -1, 0, long.MaxValue],
+            ["3B7FFFFFFFFFFFFFFF", "3B0000000100000000", "3AFFFFFFFF", "20", "00", "1B7FFFFFFFFFFFFFFF"]);
+        CheckIntegerArrays<ulong>([0, 23, 255, 256, 65536, uint.MaxValue, (ulong)uint.MaxValue + 1, ulong.MaxValue],
+            ["00", "17", "18FF", "190100", "1A00010000", "1AFFFFFFFF", "1B0000000100000000", "1BFFFFFFFFFFFFFFFF"]);
+    }
+
+    [Theory]
+    [InlineData(true, "841818190100")]
+    [InlineData(false, "8418181901001A7FFFFFFF")]
+    public unsafe void IntegerArrayBatchFailuresPublishTheScalarPrefix(bool itemLimit, string prefix)
+    {
+        var options = new CborSerializerOptions(new IntegerArrayFactory<int>(),
+            itemLimit ? new CborReaderOptions(maxItems: 3) : new CborReaderOptions(maxEncodedLength: 6));
+        byte[] storage = new byte[64];
+        fixed (byte* pointer = storage)
+        {
+            var buffer = new CompatibleSpanWriteBuffer(pointer, storage.Length);
+            try
+            {
+                try
+                {
+                    CborSerializer.Serialize(ref buffer, new[] { 24, 256, int.MaxValue, 0 }, options);
+                    Assert.Fail("Exceeded budget accepted.");
+                }
+                catch (InvalidDataException)
+                {
+                    byte[] expected = Convert.FromHexString(prefix);
+                    Assert.Equal(expected.Length, buffer.BytesWritten);
+                    Assert.Equal(expected, storage.AsSpan(0, expected.Length).ToArray());
+                }
+            }
+            finally { buffer.Dispose(); }
+        }
+    }
+
+    [Fact]
+    public void IntegerArrayItemBudgetFailsBeforeAcquiringElementStorage()
+    {
+        var options = new CborSerializerOptions(new IntegerArrayFactory<int>(), new CborReaderOptions(maxItems: 1));
+        int[] values = [24, 256];
+        byte[] storage = new byte[64];
+        var buffer = new BudgetGuardWriteBuffer(storage);
+        try
+        {
+            try
+            {
+                CborSerializer.Serialize(ref buffer, values, options);
+                Assert.Fail("Exceeded item budget accepted.");
+            }
+            catch (InvalidDataException)
+            {
+                Assert.Equal(1, buffer.BytesWritten);
+                Assert.Equal(0x82, storage[0]);
+            }
+        }
+        finally { buffer.Dispose(); }
+    }
+
+    private struct BudgetGuardWriteBuffer(byte[] storage) : IWriteBuffer
+    {
+        private int written;
+        public readonly long BytesWritten => written;
+        public readonly Span<byte> GetSpan(int sizeHint = 0)
+        {
+            if (written != 0) { throw new InvalidOperationException("Element storage was acquired after the item budget was exhausted."); }
+            return storage;
+        }
+        public void Advance(int count) => written += count;
+        public readonly void Flush() { }
+        public readonly void Dispose() { }
+    }
+
+    private static unsafe void CheckIntegerArrays<T>(T[] pattern, string[] tokens)
+    {
+        const byte Sentinel = 0xa5;
+        const int GuardLength = 7;
+        int[] counts = [0, 1, 2, 8, 31, 32, 33, 1023, 1024, 1025];
+        var options = new CborSerializerOptions(new IntegerArrayFactory<T>());
+        foreach (int count in counts)
+        {
+            var values = new T[count];
+            byte[] header = new byte[CborPrimitives.MaxHeaderLength];
+            CborPrimitives.TryWriteHeader(header, CborMajorType.Array, (ulong)count, out int length);
+            var expected = new List<byte>(header.AsSpan(0, length).ToArray());
+            for (int i = 0; i < count; i++)
+            {
+                values[i] = pattern[i % pattern.Length];
+                expected.AddRange(Convert.FromHexString(tokens[i % pattern.Length]));
+            }
+            byte[] bytes = expected.ToArray();
+            Assert.Equal(bytes, CborSerializer.Serialize(values, options));
+            Assert.Equal(values, CborSerializer.Deserialize<T[]>(bytes, options));
+            byte[] guarded = new byte[bytes.Length + GuardLength * 2];
+            Array.Fill(guarded, Sentinel);
+            fixed (byte* pointer = guarded)
+            {
+                var buffer = new CompatibleSpanWriteBuffer(pointer + GuardLength, bytes.Length);
+                try
+                {
+                    CborSerializer.Serialize(ref buffer, values, options);
+                    Assert.Equal(bytes.Length, buffer.BytesWritten);
+                }
+                finally { buffer.Dispose(); }
+            }
+            Assert.Equal(bytes, guarded.AsSpan(GuardLength, bytes.Length).ToArray());
+            Assert.All(guarded.AsSpan(0, GuardLength).ToArray(), static item => Assert.Equal(Sentinel, item));
+            Assert.All(guarded.AsSpan(GuardLength + bytes.Length).ToArray(), static item => Assert.Equal(Sentinel, item));
+        }
+    }
+
+    private sealed class IntegerArrayFactory<T> : TestFactory
+    {
+        protected override object? Create<W, R>(Type valueType) => valueType == typeof(T[]) ? new CborArrayFormatter<W, R, T>() : null;
+    }
+
+    private sealed class PrefixProbe;
+
+    private sealed class PrefixProbeFactory : TestFactory
+    {
+        internal int Reads { get; private set; }
+        protected override object? Create<W, R>(Type valueType) => valueType == typeof(PrefixProbe) ? new Formatter<W, R>(this) : null;
+
+        private sealed class Formatter<W, R>(PrefixProbeFactory owner) : ICborFormatter<W, R, PrefixProbe>
+            where W : struct, IWriteBuffer
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+            where R : struct, IReadBuffer
+#if NET9_0_OR_GREATER
+            , allows ref struct
+#endif
+        {
+            public void Initialize(CborFormatterResolver resolver) { }
+            public void Serialize(ref W buffer, ref CborSerializationContext context, PrefixProbe value) => throw new NotSupportedException();
+            public PrefixProbe Deserialize(ref R buffer, ref CborDeserializationContext context)
+            {
+                owner.Reads++;
+                buffer.Advance((int)buffer.BytesRemaining);
+                return new PrefixProbe();
+            }
+        }
+    }
 }

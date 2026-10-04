@@ -19,11 +19,14 @@ A CBOR serializer for .NET, informed by MessagePack-CSharp v4 and built on Seria
 | Cbor.Tests.Robustness | Resource limits, malformed inputs, encoding policies | net10.0 |
 | Cbor.Tests.NativeAot | Generated models, immutable constructors, dictionaries, RFC corpus, segmented input | net10.0 |
 | Cbor.Benchmarks | Primitive/oracle comparisons, typed workloads, scalar disassembly | net10.0 |
+| Cbor.Benchmarks.Comparison | Five-library serializer comparison; separate SDK selection | net10.0 |
 | Cbor.Benchmarks.Net8 | Dictionary insertion with .NET 8 APIs and Compatible buffers | net8.0 |
 | Cbor.Benchmarks.NetStandard20 | Nested models and dictionary paths against the oldest runtime asset | net8.0 consumer, netstandard2.0 library |
 | Cbor.Sandbox | Runnable generated-object serialization example | net10.0 |
 
 The .NET 9 boundary matters: generic code can accept Foundation ref-struct buffers there. The .NET Standard assets use its Compatible buffers. The .NET 8 asset also uses Compatible buffers and uses supported entry-reference dictionary insertion. Separate test projects force both .NET Standard assets to verify each shipped asset.
+
+The runtime assembly is explicitly named `Cbor.CSharp`, with namespace `Cbor`. This permits loading PeterO.Cbor's `CBOR` assembly in the same process without an assembly-name collision.
 
 ## Develop
 
@@ -48,6 +51,8 @@ Finish builds/tests before starting benchmarks, then let the benchmark process f
 `eng/verify-native.ps1 -RuntimeIdentifier win-x64` (or `linux-x64` on Linux) runs the project-based native corpus, creates a fresh package, and publishes/executes an independent Native AOT package consumer. Both native paths treat trim/AOT warnings as errors.
 
 Read [the critical quality review](docs/quality-review.md) for remaining quality and performance gaps and required work.
+See [the five-library comparison](benchmarks/Cbor.Benchmarks.Comparison/README.md) for dependency pins, fixture verification, and measurement instructions, and [the measured results](docs/benchmarks/serializer-comparison.md) for time, allocation, payload, and launch evidence.
+See [focused hot-path optimization](docs/benchmarks/hot-paths.md) for MessagePack v4-inspired integer-array batching, complete-prefix checks, short development loops, and confirmed gains with remaining encoding concerns.
 See [factory-only contract measurements](docs/benchmarks/clean-contract.md) for the current nested-model and scalar comparison.
 See [operation resolution measurements](docs/benchmarks/operation-resolution.md) for nested workloads and the compatibility dictionary evaluation.
 See [runtime path measurements](docs/benchmarks/runtime-paths.md) for object, map, and UTF-8 workloads and reproduction instructions.

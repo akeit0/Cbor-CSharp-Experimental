@@ -1,0 +1,4 @@
+[submodule "external/MessagePack-CSharp"]
+	path = external/MessagePack-CSharp
+	url = https://github.com/MessagePack-CSharp/MessagePack-CSharp.git
+	branch = v4
